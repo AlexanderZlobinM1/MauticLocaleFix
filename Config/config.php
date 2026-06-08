@@ -3,7 +3,7 @@
 return [
     'name'        => 'Mautic Locale Fix',
     'description' => 'Regional UI settings for Mautic without core patches.',
-    'version'     => '1.0.0',
+    'version'     => '1.0.1',
     'author'      => 'Sales Snap',
     'services'    => [
         'events' => [
@@ -11,6 +11,8 @@ return [
                 'class'     => MauticPlugin\MauticLocaleFixBundle\EventListener\AssetSubscriber::class,
                 'arguments' => [
                     'mautic.helper.integration',
+                    'mautic.helper.user',
+                    'mautic.helper.core_parameters',
                 ],
             ],
         ],
@@ -39,4 +41,3 @@ return [
         ],
     ],
 ];
-

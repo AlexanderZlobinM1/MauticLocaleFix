@@ -11,8 +11,76 @@
         weekStart = 1;
     }
 
+    var localeAliases = {
+        en_US: 'en',
+        en: 'en',
+        ru_RU: 'ru',
+        ru: 'ru',
+        sr_RS: 'sr-YU',
+        sr_Latn: 'sr-YU',
+        sr_Latn_RS: 'sr-YU',
+        pt_BR: 'pt-BR',
+        zh_CN: 'zh',
+        zh_TW: 'zh-TW'
+    };
+
     function getQuery() {
         return window.mQuery || window.jQuery || window.$;
+    }
+
+    function getConfiguredLocale() {
+        return config.locale || document.documentElement.getAttribute('lang') || 'en';
+    }
+
+    function getPickerLocales($) {
+        if (!$ || !$.fn || !$.fn.datetimepicker || !$.fn.datetimepicker.defaults) {
+            return {};
+        }
+
+        return $.fn.datetimepicker.defaults.i18n || {};
+    }
+
+    function getLocaleCandidates(locale) {
+        locale = String(locale || '').trim();
+        if (!locale) {
+            return ['en'];
+        }
+
+        var normalized = locale.replace('-', '_');
+        var dashed = locale.replace('_', '-');
+        var language = normalized.split('_')[0];
+        var candidates = [
+            localeAliases[normalized],
+            localeAliases[dashed],
+            localeAliases[language],
+            dashed,
+            normalized,
+            language
+        ];
+
+        return candidates.filter(function (candidate, index) {
+            return candidate && candidates.indexOf(candidate) === index;
+        });
+    }
+
+    function resolvePickerLocale($) {
+        var locales = getPickerLocales($);
+        var candidates = getLocaleCandidates(getConfiguredLocale());
+        for (var i = 0; i < candidates.length; i += 1) {
+            if (locales[candidates[i]]) {
+                return candidates[i];
+            }
+        }
+
+        return 'en';
+    }
+
+    function applyLocale($) {
+        if (!$ || !$.datetimepicker || typeof $.datetimepicker.setLocale !== 'function') {
+            return;
+        }
+
+        $.datetimepicker.setLocale(resolvePickerLocale($));
     }
 
     function withWeekStart($, options) {
@@ -42,6 +110,7 @@
             return;
         }
 
+        applyLocale($);
         $('.calendar-activated').each(function () {
             try {
                 $(this).datetimepicker('setOptions', {dayOfWeekStart: weekStart});
@@ -55,6 +124,7 @@
             return false;
         }
 
+        applyLocale($);
         if ($.fn.datetimepicker.__mauticLocaleFixPatched === true) {
             updateExistingPickers($);
 
@@ -64,6 +134,7 @@
         var original = $.fn.datetimepicker;
         var patched = function () {
             var args = Array.prototype.slice.call(arguments);
+            applyLocale($);
             if (args.length > 0) {
                 args[0] = withWeekStart($, args[0]);
             }
@@ -109,4 +180,3 @@
     document.addEventListener('mauticPageLoaded', applyPatch);
     document.addEventListener('ajaxComplete', applyPatch);
 })(window);
-

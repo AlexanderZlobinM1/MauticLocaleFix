@@ -6,6 +6,8 @@ namespace MauticPlugin\MauticLocaleFixBundle\EventListener;
 
 use Mautic\CoreBundle\CoreEvents;
 use Mautic\CoreBundle\Event\CustomAssetsEvent;
+use Mautic\CoreBundle\Helper\CoreParametersHelper;
+use Mautic\CoreBundle\Helper\UserHelper;
 use Mautic\PluginBundle\Helper\IntegrationHelper;
 use MauticPlugin\MauticLocaleFixBundle\Integration\MauticLocaleFixIntegration;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -14,6 +16,8 @@ class AssetSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private IntegrationHelper $integrationHelper,
+        private UserHelper $userHelper,
+        private CoreParametersHelper $coreParametersHelper,
     ) {
     }
 
@@ -33,6 +37,7 @@ class AssetSubscriber implements EventSubscriberInterface
 
         $config = [
             'calendarEnabled' => true,
+            'locale'          => $this->getCurrentLocale(),
             'weekStart'       => $integration->getCalendarWeekStart(),
         ];
 
@@ -64,5 +69,16 @@ class AssetSubscriber implements EventSubscriberInterface
 
         return $published ? $integration : null;
     }
-}
 
+    private function getCurrentLocale(): string
+    {
+        $user   = $this->userHelper->getUser(true);
+        $locale = null !== $user && method_exists($user, 'getLocale') ? trim((string) $user->getLocale()) : '';
+
+        if ('' === $locale) {
+            $locale = trim((string) $this->coreParametersHelper->get('locale', ''));
+        }
+
+        return '' !== $locale ? $locale : 'en_US';
+    }
+}
