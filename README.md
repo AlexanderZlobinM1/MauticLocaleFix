@@ -19,10 +19,11 @@ constructor still requires the old session service argument that is not present
 in Mautic 6/7.
 
 The plugin injects a small JavaScript asset through `VIEW_INJECT_CUSTOM_ASSETS`.
-It wraps Mautic's existing jQuery `datetimepicker()` calls and adds
-`dayOfWeekStart` only when the page did not already set it explicitly.
-It also maps Mautic locales to the locale names supported by the bundled
-datetimepicker library.
+It wraps Mautic's existing jQuery `datetimepicker()` calls and applies the
+configured `dayOfWeekStart`, including existing dashboard date range fields that
+may have been initialized before the plugin asset finished loading. It also maps
+Mautic locales to the locale names supported by the bundled datetimepicker
+library.
 
 ## Install
 
