@@ -88,10 +88,6 @@
             return options;
         }
 
-        if (typeof options.dayOfWeekStart !== 'undefined') {
-            return options;
-        }
-
         if ($ && typeof $.extend === 'function') {
             return $.extend({}, options, {dayOfWeekStart: weekStart});
         }
@@ -111,12 +107,40 @@
         }
 
         applyLocale($);
-        $('.calendar-activated').each(function () {
+        $([
+            '.calendar-activated',
+            '#daterange_date_from',
+            '#daterange_date_to',
+            'input[name="daterange[date_from]"]',
+            'input[name="daterange[date_to]"]'
+        ].join(',')).each(function () {
             try {
                 $(this).datetimepicker('setOptions', {dayOfWeekStart: weekStart});
             } catch (e) {
             }
         });
+    }
+
+    function patchMauticDateRangePicker($) {
+        if (!window.Mautic || typeof window.Mautic.initDateRangePicker !== 'function') {
+            return;
+        }
+
+        if (window.Mautic.initDateRangePicker.__mauticLocaleFixPatched === true) {
+            return;
+        }
+
+        var original = window.Mautic.initDateRangePicker;
+        var patched = function () {
+            var result = original.apply(this, arguments);
+            updateExistingPickers($);
+
+            return result;
+        };
+
+        patched.__mauticLocaleFixPatched = true;
+        patched.__mauticLocaleFixOriginal = original;
+        window.Mautic.initDateRangePicker = patched;
     }
 
     function patchDateTimePicker($) {
@@ -125,6 +149,7 @@
         }
 
         applyLocale($);
+        patchMauticDateRangePicker($);
         if ($.fn.datetimepicker.__mauticLocaleFixPatched === true) {
             updateExistingPickers($);
 
@@ -135,8 +160,10 @@
         var patched = function () {
             var args = Array.prototype.slice.call(arguments);
             applyLocale($);
-            if (args.length > 0) {
+            if (args.length > 0 && typeof args[0] === 'object') {
                 args[0] = withWeekStart($, args[0]);
+            } else if (args[0] === 'setOptions' && args.length > 1) {
+                args[1] = withWeekStart($, args[1]);
             }
 
             return original.apply(this, args);

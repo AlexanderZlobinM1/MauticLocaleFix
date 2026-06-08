@@ -14,6 +14,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
+    private const ASSET_VERSION = '1.0.5';
+
     public function __construct(
         private IntegrationHelper $integrationHelper,
         private UserHelper $userHelper,
@@ -47,7 +49,12 @@ class AssetSubscriber implements EventSubscriberInterface
                 JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
             ).';'
         );
-        $event->addScript('plugins/MauticLocaleFixBundle/Assets/js/locale-fix.js');
+        $event->addScript(
+            'plugins/MauticLocaleFixBundle/Assets/js/locale-fix.js?v='.self::ASSET_VERSION,
+            'head',
+            false,
+            'mauticlocalefix-locale-fix'
+        );
     }
 
     private function getReadyIntegration(): ?MauticLocaleFixIntegration

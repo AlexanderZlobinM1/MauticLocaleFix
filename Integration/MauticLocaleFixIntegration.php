@@ -105,6 +105,19 @@ class MauticLocaleFixIntegration extends AbstractIntegration
             );
     }
 
+    public function getFormNotes($section)
+    {
+        if ('custom' === $section) {
+            return [
+                'custom'     => true,
+                'template'   => '@MauticLocaleFix/Integration/footer.html.twig',
+                'parameters' => [],
+            ];
+        }
+
+        return parent::getFormNotes($section);
+    }
+
     public function isCalendarFixEnabled(): bool
     {
         if (!array_key_exists(self::CALENDAR_ENABLED_FIELD, $this->keys)) {
@@ -121,4 +134,3 @@ class MauticLocaleFixIntegration extends AbstractIntegration
         return $weekStart >= 0 && $weekStart <= 6 ? $weekStart : 1;
     }
 }
-
