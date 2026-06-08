@@ -1,0 +1,20 @@
+{
+    "name": "sales-snap/mautic-locale-fix-bundle",
+    "description": "Regional UI settings for Mautic without core patches.",
+    "type": "mautic-plugin",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "MauticPlugin\\MauticLocaleFixBundle\\": ""
+        }
+    },
+    "extra": {
+        "install-directory-name": "MauticLocaleFixBundle"
+    },
+    "require": {
+        "php": ">=8.1",
+        "ext-json": "*",
+        "mautic/core-lib": "^5.0 || ^6.0 || ^7.0"
+    }
+}
+
