@@ -18,6 +18,8 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public const CALENDAR_WEEK_START_FIELD = 'calendar_week_start';
 
+    public const CALENDAR_DATE_FORMAT_FIELD = 'calendar_date_format';
+
     public function getName()
     {
         return self::NAME;
@@ -102,6 +104,27 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                         'tooltip' => 'mautic.integration.mauticlocalefix.calendar_week_start.tooltip',
                     ],
                 ]
+            )
+            ->add(
+                self::CALENDAR_DATE_FORMAT_FIELD,
+                ChoiceType::class,
+                [
+                    'label'       => 'mautic.integration.mauticlocalefix.calendar_date_format',
+                    'required'    => true,
+                    'choices'     => [
+                        'mautic.integration.mauticlocalefix.date_format.locale_medium' => 'locale_medium',
+                        'mautic.integration.mauticlocalefix.date_format.locale_long'   => 'locale_long',
+                        'mautic.integration.mauticlocalefix.date_format.iso'           => 'iso',
+                        'mautic.integration.mauticlocalefix.date_format.numeric_dmy'   => 'numeric_dmy',
+                        'mautic.integration.mauticlocalefix.date_format.numeric_mdy'   => 'numeric_mdy',
+                    ],
+                    'data'        => $data[self::CALENDAR_DATE_FORMAT_FIELD] ?? 'locale_medium',
+                    'placeholder' => false,
+                    'attr'        => [
+                        'class'   => 'form-control',
+                        'tooltip' => 'mautic.integration.mauticlocalefix.calendar_date_format.tooltip',
+                    ],
+                ]
             );
     }
 
@@ -132,5 +155,19 @@ class MauticLocaleFixIntegration extends AbstractIntegration
         $weekStart = (int) ($this->keys[self::CALENDAR_WEEK_START_FIELD] ?? 1);
 
         return $weekStart >= 0 && $weekStart <= 6 ? $weekStart : 1;
+    }
+
+    public function getCalendarDateFormat(): string
+    {
+        $format = (string) ($this->keys[self::CALENDAR_DATE_FORMAT_FIELD] ?? 'locale_medium');
+        $allowed = [
+            'locale_medium',
+            'locale_long',
+            'iso',
+            'numeric_dmy',
+            'numeric_mdy',
+        ];
+
+        return in_array($format, $allowed, true) ? $format : 'locale_medium';
     }
 }

@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.5';
+    private const ASSET_VERSION = '1.0.6';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -41,6 +41,7 @@ class AssetSubscriber implements EventSubscriberInterface
             'calendarEnabled' => true,
             'locale'          => $this->getCurrentLocale(),
             'weekStart'       => $integration->getCalendarWeekStart(),
+            'dateFormat'      => $integration->getCalendarDateFormat(),
         ];
 
         $event->addScriptDeclaration(
