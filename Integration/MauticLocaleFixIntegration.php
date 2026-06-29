@@ -20,6 +20,8 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public const CALENDAR_DATE_FORMAT_FIELD = 'calendar_date_format';
 
+    public const CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD = 'campaign_datetime_utc_submit';
+
     public function getName()
     {
         return self::NAME;
@@ -125,6 +127,19 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                         'tooltip' => 'mautic.integration.mauticlocalefix.calendar_date_format.tooltip',
                     ],
                 ]
+            )
+            ->add(
+                self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD,
+                YesNoButtonGroupType::class,
+                [
+                    'label' => 'mautic.integration.mauticlocalefix.campaign_datetime_utc_submit',
+                    'data'  => array_key_exists(self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD, $data)
+                        ? (bool) $data[self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD]
+                        : true,
+                    'attr'  => [
+                        'tooltip' => 'mautic.integration.mauticlocalefix.campaign_datetime_utc_submit.tooltip',
+                    ],
+                ]
             );
     }
 
@@ -169,5 +184,14 @@ class MauticLocaleFixIntegration extends AbstractIntegration
         ];
 
         return in_array($format, $allowed, true) ? $format : 'locale_medium';
+    }
+
+    public function isCampaignDateTimeUtcSubmitEnabled(): bool
+    {
+        if (!array_key_exists(self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD, $this->keys)) {
+            return true;
+        }
+
+        return (bool) $this->keys[self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD];
     }
 }

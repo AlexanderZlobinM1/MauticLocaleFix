@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.8';
+    private const ASSET_VERSION = '1.0.9';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -33,15 +33,24 @@ class AssetSubscriber implements EventSubscriberInterface
     public function injectAssets(CustomAssetsEvent $event): void
     {
         $integration = $this->getReadyIntegration();
-        if (!$integration instanceof MauticLocaleFixIntegration || !$integration->isCalendarFixEnabled()) {
+        if (!$integration instanceof MauticLocaleFixIntegration) {
+            return;
+        }
+
+        $calendarEnabled           = $integration->isCalendarFixEnabled();
+        $campaignDateTimeUtcSubmit = $integration->isCampaignDateTimeUtcSubmitEnabled();
+
+        if (!$calendarEnabled && !$campaignDateTimeUtcSubmit) {
             return;
         }
 
         $config = [
-            'calendarEnabled' => true,
-            'locale'          => $this->getCurrentLocale(),
-            'weekStart'       => $integration->getCalendarWeekStart(),
-            'dateFormat'      => $integration->getCalendarDateFormat(),
+            'calendarEnabled'           => $calendarEnabled,
+            'locale'                    => $this->getCurrentLocale(),
+            'weekStart'                 => $integration->getCalendarWeekStart(),
+            'dateFormat'                => $integration->getCalendarDateFormat(),
+            'mauticTimezone'            => $this->getMauticTimezone(),
+            'campaignDateTimeUtcSubmit' => $campaignDateTimeUtcSubmit,
         ];
 
         $event->addScriptDeclaration(
@@ -88,5 +97,12 @@ class AssetSubscriber implements EventSubscriberInterface
         }
 
         return '' !== $locale ? $locale : 'en_US';
+    }
+
+    private function getMauticTimezone(): string
+    {
+        $timezone = trim((string) $this->coreParametersHelper->get('default_timezone', ''));
+
+        return '' !== $timezone ? $timezone : trim((string) date_default_timezone_get());
     }
 }

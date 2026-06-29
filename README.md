@@ -10,6 +10,10 @@ Mautic plugin that adds regional UI settings without patching Mautic core files.
   simple table date cells.
 - Date-only formatting is intentionally limited to date-only pickers so
   date/time campaign fields keep Mautic's `Y-m-d H:i` format.
+- Optional campaign date/time submit workaround. When Mautic parses campaign
+  event dates as UTC instead of the configured Mautic timezone, the plugin can
+  submit only the campaign event `triggerDate` field as UTC while keeping the
+  operator-facing value in local Mautic time.
 - The browser asset is fail-closed: if the integration is disabled or its
   runtime config is not injected, the JavaScript exits without touching Mautic
   date pickers.
@@ -52,10 +56,13 @@ php bin/console cache:clear
 ```
 
 Enable **Mautic Locale Fix** in Mautic integrations, then set **Calendar week
-start** and **Calendar date format**.
+start**, **Calendar date format**, and optionally **Fix campaign date/time
+timezone submit**.
 
 ## Notes
 
-This plugin intentionally does not change timezone settings. It controls the
-first day of the week, the calendar popup language, and selected date-only
-display formats through human-readable choices.
+This plugin intentionally does not change global timezone settings or Mautic
+core files. It controls the first day of the week, the calendar popup language,
+selected date-only display formats, and an optional campaign builder workaround
+for Mautic installations where campaign event date/time submit handling parses
+local Mautic time as UTC.
