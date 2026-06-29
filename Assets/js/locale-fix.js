@@ -399,6 +399,30 @@
         }
     }
 
+    function pickerOptionsSignature(options) {
+        if (!options || typeof options !== 'object') {
+            return '';
+        }
+
+        return [
+            'weekStart=' + String(options.dayOfWeekStart),
+            'format=' + String(options.format || '')
+        ].join(';');
+    }
+
+    function setPickerOptionsOnce($, element, options) {
+        var signature = pickerOptionsSignature(options);
+        if (!element || !signature || element.getAttribute('data-mautic-locale-fix-options') === signature) {
+            return;
+        }
+
+        try {
+            $(element).datetimepicker('setOptions', options);
+            element.setAttribute('data-mautic-locale-fix-options', signature);
+        } catch (e) {
+        }
+    }
+
     function formatExistingDateValues($) {
         var inputs = document.querySelectorAll([
             '#daterange_date_from',
@@ -448,10 +472,7 @@
                 options.format = getPickerFormat();
             }
 
-            try {
-                $(this).datetimepicker('setOptions', options);
-            } catch (e) {
-            }
+            setPickerOptionsOnce($, this, options);
 
             if (shouldFormatDateOnly) {
                 formatDateInputValue(this);

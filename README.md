@@ -13,6 +13,8 @@ Mautic plugin that adds regional UI settings without patching Mautic core files.
 - The browser asset is fail-closed: if the integration is disabled or its
   runtime config is not injected, the JavaScript exits without touching Mautic
   date pickers.
+- Existing picker options are applied idempotently, avoiding repeated
+  `setOptions` calls while a calendar popup is open.
 - Default value: Monday.
 - Supported switch values: Sunday or Monday.
 
