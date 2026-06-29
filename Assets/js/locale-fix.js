@@ -2,7 +2,7 @@
     'use strict';
 
     var config = window.MauticLocaleFixConfig || {};
-    if (config.calendarEnabled === false) {
+    if (config.calendarEnabled !== true) {
         return;
     }
 
@@ -216,7 +216,7 @@
             return false;
         }
 
-        if (options.timepicker === false || options.datepicker === true) {
+        if (options.timepicker === false) {
             return true;
         }
 
@@ -225,6 +225,14 @@
         }
 
         return false;
+    }
+
+    function isDateOnlyPickerElement(element) {
+        if (!element || !element.getAttribute) {
+            return false;
+        }
+
+        return element.getAttribute('data-toggle') === 'date' || isDateRangeInput(element);
     }
 
     function isDateRangeInput(element) {
@@ -249,7 +257,7 @@
         var shouldApply = isDateOnlyPickerOptions(formatted);
         if (!shouldApply && elements && elements.length) {
             for (var i = 0; i < elements.length; i += 1) {
-                if (isDateRangeInput(elements[i])) {
+                if (isDateOnlyPickerElement(elements[i])) {
                     shouldApply = true;
                     break;
                 }
@@ -434,12 +442,20 @@
             'input[name="daterange[date_from]"]',
             'input[name="daterange[date_to]"]'
         ].join(',')).each(function () {
+            var options = {dayOfWeekStart: weekStart};
+            var shouldFormatDateOnly = isDateOnlyPickerElement(this);
+            if (shouldFormatDateOnly) {
+                options.format = getPickerFormat();
+            }
+
             try {
-                $(this).datetimepicker('setOptions', {dayOfWeekStart: weekStart, format: getPickerFormat()});
+                $(this).datetimepicker('setOptions', options);
             } catch (e) {
             }
 
-            formatDateInputValue(this);
+            if (shouldFormatDateOnly) {
+                formatDateInputValue(this);
+            }
         });
 
         formatExistingDateValues($);
