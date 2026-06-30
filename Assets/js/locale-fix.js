@@ -215,30 +215,6 @@
         return pickerFormatByDisplayFormat[dateDisplayFormat] || pickerFormatByDisplayFormat.locale_medium;
     }
 
-    function isDateOnlyPickerOptions(options) {
-        if (!options || typeof options !== 'object' || Array.isArray(options)) {
-            return false;
-        }
-
-        if (options.timepicker === false) {
-            return true;
-        }
-
-        if ('string' === typeof options.format && !/[HhGgisAa]/.test(options.format)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    function isDateOnlyPickerElement(element) {
-        if (!element || !element.getAttribute) {
-            return false;
-        }
-
-        return element.getAttribute('data-toggle') === 'date' || isDateRangeInput(element);
-    }
-
     function isDateRangeInput(element) {
         if (!element || !element.matches) {
             return false;
@@ -252,23 +228,39 @@
         ].join(','));
     }
 
+    function shouldApplyDisplayFormatToElement(element) {
+        if (!element || !element.getAttribute) {
+            return false;
+        }
+
+        if (element.getAttribute('data-mautic-locale-fix-format') === '1') {
+            return true;
+        }
+
+        return isDateRangeInput(element);
+    }
+
+    function shouldApplyDisplayFormatToElements(elements) {
+        if (!elements || !elements.length) {
+            return false;
+        }
+
+        for (var i = 0; i < elements.length; i += 1) {
+            if (shouldApplyDisplayFormatToElement(elements[i])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     function withDateFormat($, options, elements) {
         var formatted = withWeekStart($, options);
         if (!formatted || typeof formatted !== 'object' || Array.isArray(formatted)) {
             return formatted;
         }
 
-        var shouldApply = isDateOnlyPickerOptions(formatted);
-        if (!shouldApply && elements && elements.length) {
-            for (var i = 0; i < elements.length; i += 1) {
-                if (isDateOnlyPickerElement(elements[i])) {
-                    shouldApply = true;
-                    break;
-                }
-            }
-        }
-
-        if (shouldApply) {
+        if (shouldApplyDisplayFormatToElements(elements)) {
             formatted.format = getPickerFormat();
         }
 
@@ -614,14 +606,14 @@
 
         applyLocale($);
         $([
-            '.calendar-activated',
             '#daterange_date_from',
             '#daterange_date_to',
             'input[name="daterange[date_from]"]',
-            'input[name="daterange[date_to]"]'
+            'input[name="daterange[date_to]"]',
+            '[data-mautic-locale-fix-format="1"]'
         ].join(',')).each(function () {
             var options = {dayOfWeekStart: weekStart};
-            var shouldFormatDateOnly = isDateOnlyPickerElement(this);
+            var shouldFormatDateOnly = shouldApplyDisplayFormatToElement(this);
             if (shouldFormatDateOnly) {
                 options.format = getPickerFormat();
             }
