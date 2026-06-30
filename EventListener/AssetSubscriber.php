@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.17';
+    private const ASSET_VERSION = '1.0.18';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -34,6 +34,8 @@ class AssetSubscriber implements EventSubscriberInterface
     {
         $integration = $this->getIntegration();
         if (!$integration instanceof MauticLocaleFixIntegration) {
+            $event->addScriptDeclaration($this->getLegacyCleanupScript(), 'bodyClose');
+
             return;
         }
 
@@ -122,7 +124,7 @@ JS;
     private function getIntegration(): ?MauticLocaleFixIntegration
     {
         $integration = $this->integrationHelper->getIntegrationObject(MauticLocaleFixIntegration::NAME);
-        if (!$integration instanceof MauticLocaleFixIntegration || !$integration->isConfigured()) {
+        if (!$integration instanceof MauticLocaleFixIntegration) {
             return null;
         }
 
