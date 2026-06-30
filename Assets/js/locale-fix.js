@@ -678,45 +678,27 @@
     }
 
     function patchDateTimePicker($) {
+        restoreLegacyDatePickerWrappers($);
+
         if (!$ || !$.fn || typeof $.fn.datetimepicker !== 'function') {
             return false;
         }
 
         applyLocale($);
         applyDateTimePickerDefaults($);
-        patchMauticDateRangePicker($);
-        if ($.fn.datetimepicker.__mauticLocaleFixPatched === true) {
-            updateExistingPickers($);
-
-            return true;
-        }
-
-        var original = $.fn.datetimepicker;
-        var patched = function () {
-            var args = Array.prototype.slice.call(arguments);
-            applyLocale($);
-            if (args.length > 0 && typeof args[0] === 'object') {
-                args[0] = withDateFormat($, args[0], this);
-            } else if (args[0] === 'setOptions' && args.length > 1) {
-                args[1] = withDateFormat($, args[1], this);
-            }
-
-            return original.apply(this, args);
-        };
-
-        Object.keys(original).forEach(function (key) {
-            patched[key] = original[key];
-        });
-
-        patched.__mauticLocaleFixPatched = true;
-        patched.__mauticLocaleFixOriginal = original;
-        $.fn.datetimepicker = patched;
-
-        applyDateTimePickerDefaults($);
-
-        updateExistingPickers($);
+        runtime.calendarDefaultsApplied = true;
 
         return true;
+    }
+
+    function restoreLegacyDatePickerWrappers($) {
+        if ($ && $.fn && $.fn.datetimepicker && $.fn.datetimepicker.__mauticLocaleFixOriginal) {
+            $.fn.datetimepicker = $.fn.datetimepicker.__mauticLocaleFixOriginal;
+        }
+
+        if (window.Mautic && window.Mautic.initDateRangePicker && window.Mautic.initDateRangePicker.__mauticLocaleFixOriginal) {
+            window.Mautic.initDateRangePicker = window.Mautic.initDateRangePicker.__mauticLocaleFixOriginal;
+        }
     }
 
     function patchCampaignDateTimeSubmit() {
@@ -907,12 +889,7 @@
             runtime.campaignSubmitHandler = null;
             document.__mauticLocaleFixCampaignDateSubmitPatched = false;
         }
-        if ($ && $.fn && $.fn.datetimepicker && $.fn.datetimepicker.__mauticLocaleFixOriginal) {
-            $.fn.datetimepicker = $.fn.datetimepicker.__mauticLocaleFixOriginal;
-        }
-        if (window.Mautic && window.Mautic.initDateRangePicker && window.Mautic.initDateRangePicker.__mauticLocaleFixOriginal) {
-            window.Mautic.initDateRangePicker = window.Mautic.initDateRangePicker.__mauticLocaleFixOriginal;
-        }
+        restoreLegacyDatePickerWrappers($);
         if (window.Mautic && window.Mautic.submitCampaignEvent && window.Mautic.submitCampaignEvent.__mauticLocaleFixOriginal) {
             window.Mautic.submitCampaignEvent = window.Mautic.submitCampaignEvent.__mauticLocaleFixOriginal;
         }

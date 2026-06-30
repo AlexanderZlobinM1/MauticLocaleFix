@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.11';
+    private const ASSET_VERSION = '1.0.14';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -38,8 +38,16 @@ class AssetSubscriber implements EventSubscriberInterface
         }
 
         $published                 = $this->isIntegrationPublished($integration);
+        if (!$published) {
+            return;
+        }
+
         $calendarEnabled           = $published && $integration->isCalendarFixEnabled();
         $campaignDateTimeUtcSubmit = $published && $integration->isCampaignDateTimeUtcSubmitEnabled();
+
+        if (!$calendarEnabled && !$campaignDateTimeUtcSubmit) {
+            return;
+        }
 
         $config = [
             'enabled'                   => $published,
