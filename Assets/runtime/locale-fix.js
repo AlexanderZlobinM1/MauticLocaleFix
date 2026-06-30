@@ -904,7 +904,8 @@
         var patched = calendarEnabled ? patchDateTimePicker($) : false;
         var campaignPatched = patchCampaignDateTimeSubmit();
         if (calendarEnabled) {
-            formatExistingDateValues($);
+            patchMauticDateRangePicker($);
+            updateExistingPickers($);
         }
 
         return patched || campaignPatched;

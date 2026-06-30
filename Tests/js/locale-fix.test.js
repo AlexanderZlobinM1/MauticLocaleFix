@@ -181,14 +181,32 @@ function testCampaignSubmitDoesNotPatchDatepickerWhenCalendarFixIsOff() {
 
 function createDatepickerQuery(original, elements = []) {
   original.defaults = original.defaults || {};
-  const query = function () {
-    return {
-      length: elements.length,
+  const setOptionsCalls = [];
+  const query = function (target) {
+    const collectionElements = typeof target === 'string' && target.indexOf('data-mautic-locale-fix-date-text') !== -1
+      ? []
+      : (target && target.getAttribute ? [target] : elements);
+    const collection = {
+      length: collectionElements.length,
+      datetimepicker(command, options) {
+        if (command === 'setOptions') {
+          collectionElements.forEach((element) => {
+            setOptionsCalls.push({element, options});
+          });
+
+          return collection;
+        }
+
+        return original.apply(collection, arguments);
+      },
       each(callback) {
-        elements.forEach((element) => callback.call(element));
+        collectionElements.forEach((element) => callback.call(element));
       },
     };
+
+    return collection;
   };
+  query.__setOptionsCalls = setOptionsCalls;
   query.fn = {datetimepicker: original};
   query.extend = function (target, ...sources) {
     return Object.assign(target, ...sources);
@@ -308,6 +326,32 @@ function testExplicitOptInDateRangeDoesNotWrapDatepickerOptions() {
   assert.strictEqual(query.fn.datetimepicker.defaults.dayOfWeekStart, 1);
 }
 
+function testCalendarFixUpdatesExistingDateRangePickerOptions() {
+  const dateRangeInput = createInput('2026-06-30', {
+    matches(selector) {
+      return selector.includes('#daterange_date_from');
+    },
+  });
+  const original = function () {
+    return this;
+  };
+  const query = createDatepickerQuery(original, [dateRangeInput]);
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: true,
+    campaignDateTimeUtcSubmit: false,
+    weekStart: 1,
+    dateFormat: 'locale_medium',
+  }, {query});
+
+  assert.strictEqual(query.fn.datetimepicker, original);
+  assert.strictEqual(query.__setOptionsCalls.length, 1);
+  assert.strictEqual(query.__setOptionsCalls[0].element, dateRangeInput);
+  assert.strictEqual(query.__setOptionsCalls[0].options.dayOfWeekStart, 1);
+  assert.strictEqual(dateRangeInput.getAttribute('data-mautic-locale-fix-options'), 'weekStart=1;format=');
+}
+
 function testActiveDisabledStopsAllFeaturePatches() {
   const seen = [];
   const original = function (options) {
@@ -398,6 +442,7 @@ testCampaignSubmitDoesNotPatchDatepickerWhenCalendarFixIsOff();
 testThirdPartyDatePickerKeepsItsOptionsUntouched();
 testCalendarFixSetsDefaultWeekStartWithoutWrappingDatepicker();
 testExplicitOptInDateRangeDoesNotWrapDatepickerOptions();
+testCalendarFixUpdatesExistingDateRangePickerOptions();
 testActiveDisabledStopsAllFeaturePatches();
 testActiveDisabledRestoresLegacyDatepickerWrapper();
 testCalendarFixRestoresLegacyDatepickerWrapper();
