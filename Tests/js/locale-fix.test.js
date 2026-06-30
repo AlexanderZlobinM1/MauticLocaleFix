@@ -4,7 +4,7 @@ const path = require('path');
 const vm = require('vm');
 
 const source = fs.readFileSync(
-  path.join(__dirname, '../../Assets/js/locale-fix.js'),
+  path.join(__dirname, '../../Assets/runtime/locale-fix.js'),
   'utf8'
 );
 
@@ -341,6 +341,31 @@ function testActiveDisabledStopsAllFeaturePatches() {
   assert.strictEqual(env.submitListeners.length, 0);
 }
 
+function testActiveDisabledRestoresLegacyDatepickerWrapper() {
+  const original = function () {
+    return this;
+  };
+  original.defaults = {};
+  const staleWrapper = function () {
+    return original.apply(this, arguments);
+  };
+  staleWrapper.defaults = original.defaults;
+  staleWrapper.__mauticLocaleFixPatched = true;
+  staleWrapper.__mauticLocaleFixOriginal = original;
+  const query = createDatepickerQuery(staleWrapper);
+
+  runPlugin({
+    enabled: false,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: false,
+    weekStart: 1,
+    dateFormat: 'locale_medium',
+  }, {query});
+
+  assert.strictEqual(query.fn.datetimepicker, original);
+  assert.strictEqual(query.fn.datetimepicker.__mauticLocaleFixPatched, undefined);
+}
+
 function testCalendarFixRestoresLegacyDatepickerWrapper() {
   const original = function () {
     return this;
@@ -374,6 +399,7 @@ testThirdPartyDatePickerKeepsItsOptionsUntouched();
 testCalendarFixSetsDefaultWeekStartWithoutWrappingDatepicker();
 testExplicitOptInDateRangeDoesNotWrapDatepickerOptions();
 testActiveDisabledStopsAllFeaturePatches();
+testActiveDisabledRestoresLegacyDatepickerWrapper();
 testCalendarFixRestoresLegacyDatepickerWrapper();
 
 console.log('locale-fix tests passed');

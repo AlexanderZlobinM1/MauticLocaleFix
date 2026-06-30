@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.14';
+    private const ASSET_VERSION = '1.0.17';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -38,14 +38,12 @@ class AssetSubscriber implements EventSubscriberInterface
         }
 
         $published                 = $this->isIntegrationPublished($integration);
-        if (!$published) {
-            return;
-        }
-
         $calendarEnabled           = $published && $integration->isCalendarFixEnabled();
         $campaignDateTimeUtcSubmit = $published && $integration->isCampaignDateTimeUtcSubmitEnabled();
 
         if (!$calendarEnabled && !$campaignDateTimeUtcSubmit) {
+            $event->addScriptDeclaration($this->getLegacyCleanupScript(), 'bodyClose');
+
             return;
         }
 
@@ -66,11 +64,59 @@ class AssetSubscriber implements EventSubscriberInterface
             ).';'
         );
         $event->addScript(
-            'plugins/MauticLocaleFixBundle/Assets/js/locale-fix.js?v='.self::ASSET_VERSION,
-            'head',
+            'plugins/MauticLocaleFixBundle/Assets/runtime/locale-fix.js?v='.self::ASSET_VERSION,
+            'bodyClose',
             false,
             'mauticlocalefix-locale-fix'
         );
+    }
+
+    private function getLegacyCleanupScript(): string
+    {
+        return <<<'JS'
+(function (window) {
+    'use strict';
+    var runtime = window.__mauticLocaleFixRuntime;
+    var $ = window.mQuery || window.jQuery || window.$;
+    if (runtime) {
+        if (runtime.timer) {
+            window.clearInterval(runtime.timer);
+            runtime.timer = null;
+        }
+        if (runtime.observer) {
+            runtime.observer.disconnect();
+            runtime.observer = null;
+        }
+        if (runtime.observerTimer) {
+            window.clearTimeout(runtime.observerTimer);
+            runtime.observerTimer = null;
+        }
+        if (runtime.pageLoadedHandler) {
+            document.removeEventListener('mauticPageLoaded', runtime.pageLoadedHandler);
+            document.removeEventListener('ajaxComplete', runtime.pageLoadedHandler);
+            runtime.pageLoadedHandler = null;
+        }
+        if (runtime.domContentLoadedHandler) {
+            document.removeEventListener('DOMContentLoaded', runtime.domContentLoadedHandler);
+            runtime.domContentLoadedHandler = null;
+        }
+        if (runtime.campaignSubmitHandler) {
+            document.removeEventListener('submit', runtime.campaignSubmitHandler, true);
+            runtime.campaignSubmitHandler = null;
+            document.__mauticLocaleFixCampaignDateSubmitPatched = false;
+        }
+    }
+    if ($ && $.fn && $.fn.datetimepicker && $.fn.datetimepicker.__mauticLocaleFixOriginal) {
+        $.fn.datetimepicker = $.fn.datetimepicker.__mauticLocaleFixOriginal;
+    }
+    if (window.Mautic && window.Mautic.initDateRangePicker && window.Mautic.initDateRangePicker.__mauticLocaleFixOriginal) {
+        window.Mautic.initDateRangePicker = window.Mautic.initDateRangePicker.__mauticLocaleFixOriginal;
+    }
+    if (window.Mautic && window.Mautic.submitCampaignEvent && window.Mautic.submitCampaignEvent.__mauticLocaleFixOriginal) {
+        window.Mautic.submitCampaignEvent = window.Mautic.submitCampaignEvent.__mauticLocaleFixOriginal;
+    }
+})(window);
+JS;
     }
 
     private function getIntegration(): ?MauticLocaleFixIntegration
