@@ -34,7 +34,7 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public function getDescription()
     {
-        return 'mautic.integration.mauticlocalefix.description';
+        return 'Regional UI settings for Mautic without core patches.';
     }
 
     public function getAuthenticationType()
@@ -85,6 +85,7 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                         ? (bool) $data[self::CALENDAR_ENABLED_FIELD]
                         : true,
                     'attr'  => [
+                        'class'   => 'mauticlocalefix-calendar-toggle',
                         'tooltip' => 'mautic.integration.mauticlocalefix.calendar_enabled.tooltip',
                     ],
                 ]
@@ -102,7 +103,8 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                     'data'        => $data[self::CALENDAR_WEEK_START_FIELD] ?? 1,
                     'placeholder' => false,
                     'attr'        => [
-                        'class'   => 'form-control',
+                        'class'   => 'form-control mauticlocalefix-calendar-dependent',
+                        'data-mauticlocalefix-dependent' => 'calendar',
                         'tooltip' => 'mautic.integration.mauticlocalefix.calendar_week_start.tooltip',
                     ],
                 ]
@@ -123,7 +125,8 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                     'data'        => $data[self::CALENDAR_DATE_FORMAT_FIELD] ?? 'locale_medium',
                     'placeholder' => false,
                     'attr'        => [
-                        'class'   => 'form-control',
+                        'class'   => 'form-control mauticlocalefix-calendar-dependent',
+                        'data-mauticlocalefix-dependent' => 'calendar',
                         'tooltip' => 'mautic.integration.mauticlocalefix.calendar_date_format.tooltip',
                     ],
                 ]
@@ -137,6 +140,7 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                         ? (bool) $data[self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD]
                         : true,
                     'attr'  => [
+                        'class'   => 'mauticlocalefix-feature-toggle',
                         'tooltip' => 'mautic.integration.mauticlocalefix.campaign_datetime_utc_submit.tooltip',
                     ],
                 ]

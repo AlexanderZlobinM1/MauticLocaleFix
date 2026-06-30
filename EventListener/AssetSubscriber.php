@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.10';
+    private const ASSET_VERSION = '1.0.11';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -32,19 +32,17 @@ class AssetSubscriber implements EventSubscriberInterface
 
     public function injectAssets(CustomAssetsEvent $event): void
     {
-        $integration = $this->getReadyIntegration();
+        $integration = $this->getIntegration();
         if (!$integration instanceof MauticLocaleFixIntegration) {
             return;
         }
 
-        $calendarEnabled           = $integration->isCalendarFixEnabled();
-        $campaignDateTimeUtcSubmit = $integration->isCampaignDateTimeUtcSubmitEnabled();
-
-        if (!$calendarEnabled && !$campaignDateTimeUtcSubmit) {
-            return;
-        }
+        $published                 = $this->isIntegrationPublished($integration);
+        $calendarEnabled           = $published && $integration->isCalendarFixEnabled();
+        $campaignDateTimeUtcSubmit = $published && $integration->isCampaignDateTimeUtcSubmitEnabled();
 
         $config = [
+            'enabled'                   => $published,
             'calendarEnabled'           => $calendarEnabled,
             'locale'                    => $this->getCurrentLocale(),
             'weekStart'                 => $integration->getCalendarWeekStart(),
@@ -67,24 +65,44 @@ class AssetSubscriber implements EventSubscriberInterface
         );
     }
 
-    private function getReadyIntegration(): ?MauticLocaleFixIntegration
+    private function getIntegration(): ?MauticLocaleFixIntegration
     {
         $integration = $this->integrationHelper->getIntegrationObject(MauticLocaleFixIntegration::NAME);
         if (!$integration instanceof MauticLocaleFixIntegration || !$integration->isConfigured()) {
             return null;
         }
 
+        return $integration;
+    }
+
+    private function isIntegrationPublished(MauticLocaleFixIntegration $integration): bool
+    {
         $settings  = $integration->getIntegrationSettings();
+        $known     = false;
         $published = false;
         if (is_object($settings)) {
             if (method_exists($settings, 'isPublished')) {
                 $published = (bool) $settings->isPublished();
+                $known     = true;
             } elseif (method_exists($settings, 'getIsPublished')) {
                 $published = (bool) $settings->getIsPublished();
+                $known     = true;
+            } elseif (method_exists($settings, 'getPublished')) {
+                $published = (bool) $settings->getPublished();
+                $known     = true;
             }
+        } elseif (is_array($settings)) {
+            $published = (bool) ($settings['isPublished'] ?? $settings['is_published'] ?? $settings['published'] ?? false);
+            $known     = array_key_exists('isPublished', $settings) ||
+                array_key_exists('is_published', $settings) ||
+                array_key_exists('published', $settings);
         }
 
-        return $published ? $integration : null;
+        if (!$known && method_exists($integration, 'isPublished')) {
+            return (bool) $integration->isPublished();
+        }
+
+        return $published;
     }
 
     private function getCurrentLocale(): string

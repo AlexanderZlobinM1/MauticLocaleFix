@@ -2,11 +2,10 @@
     'use strict';
 
     var config = window.MauticLocaleFixConfig || {};
-    var calendarEnabled = config.calendarEnabled === true;
-    var campaignDateTimeUtcSubmit = config.campaignDateTimeUtcSubmit === true;
-    if (!calendarEnabled && !campaignDateTimeUtcSubmit) {
-        return;
-    }
+    var pluginEnabled = config.enabled === true;
+    var calendarEnabled = pluginEnabled && config.calendarEnabled === true;
+    var campaignDateTimeUtcSubmit = pluginEnabled && config.campaignDateTimeUtcSubmit === true;
+    var runtime = window.__mauticLocaleFixRuntime = window.__mauticLocaleFixRuntime || {};
 
     var weekStart = parseInt(config.weekStart, 10);
     if (isNaN(weekStart) || weekStart < 0 || weekStart > 6) {
@@ -193,6 +192,14 @@
         $.datetimepicker.setLocale(resolvePickerLocale($));
     }
 
+    function applyDateTimePickerDefaults($) {
+        if (!$ || !$.fn || !$.fn.datetimepicker || !$.fn.datetimepicker.defaults) {
+            return;
+        }
+
+        $.fn.datetimepicker.defaults.dayOfWeekStart = weekStart;
+    }
+
     function withWeekStart($, options) {
         if (!options || typeof options !== 'object' || Array.isArray(options)) {
             return options;
@@ -233,11 +240,31 @@
             return false;
         }
 
-        if (element.getAttribute('data-mautic-locale-fix-format') === '1') {
-            return true;
+        return element.getAttribute('data-mautic-locale-fix-format') === '1';
+    }
+
+    function shouldApplyCalendarOptionsToElement(element) {
+        if (!element || !element.getAttribute) {
+            return false;
         }
 
-        return isDateRangeInput(element);
+        return isDateRangeInput(element) ||
+            element.getAttribute('data-mautic-locale-fix-calendar') === '1' ||
+            shouldApplyDisplayFormatToElement(element);
+    }
+
+    function shouldApplyCalendarOptionsToElements(elements) {
+        if (!elements || !elements.length) {
+            return false;
+        }
+
+        for (var i = 0; i < elements.length; i += 1) {
+            if (shouldApplyCalendarOptionsToElement(elements[i])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     function shouldApplyDisplayFormatToElements(elements) {
@@ -255,6 +282,10 @@
     }
 
     function withDateFormat($, options, elements) {
+        if (!shouldApplyCalendarOptionsToElements(elements)) {
+            return options;
+        }
+
         var formatted = withWeekStart($, options);
         if (!formatted || typeof formatted !== 'object' || Array.isArray(formatted)) {
             return formatted;
@@ -570,12 +601,7 @@
     }
 
     function formatExistingDateValues($) {
-        var inputs = document.querySelectorAll([
-            '#daterange_date_from',
-            '#daterange_date_to',
-            'input[name="daterange[date_from]"]',
-            'input[name="daterange[date_to]"]'
-        ].join(','));
+        var inputs = document.querySelectorAll('[data-mautic-locale-fix-format="1"]');
 
         Array.prototype.forEach.call(inputs, formatDateInputValue);
 
@@ -583,7 +609,7 @@
             return;
         }
 
-        $('td, th').each(function () {
+        $('[data-mautic-locale-fix-date-text="1"]').each(function () {
             if (this.children.length > 0) {
                 return;
             }
@@ -610,6 +636,7 @@
             '#daterange_date_to',
             'input[name="daterange[date_from]"]',
             'input[name="daterange[date_to]"]',
+            '[data-mautic-locale-fix-calendar="1"]',
             '[data-mautic-locale-fix-format="1"]'
         ].join(',')).each(function () {
             var options = {dayOfWeekStart: weekStart};
@@ -656,6 +683,7 @@
         }
 
         applyLocale($);
+        applyDateTimePickerDefaults($);
         patchMauticDateRangePicker($);
         if ($.fn.datetimepicker.__mauticLocaleFixPatched === true) {
             updateExistingPickers($);
@@ -684,9 +712,7 @@
         patched.__mauticLocaleFixOriginal = original;
         $.fn.datetimepicker = patched;
 
-        if ($.fn.datetimepicker.defaults) {
-            $.fn.datetimepicker.defaults.dayOfWeekStart = weekStart;
-        }
+        applyDateTimePickerDefaults($);
 
         updateExistingPickers($);
 
@@ -720,7 +746,7 @@
         }
 
         if (document.__mauticLocaleFixCampaignDateSubmitPatched !== true) {
-            document.addEventListener('submit', function (event) {
+            runtime.campaignSubmitHandler = function (event) {
                 var form = event.target;
                 if (!form || !form.matches || !form.matches('form[name="campaignevent"]')) {
                     return;
@@ -732,11 +758,164 @@
                         restoreCampaignTriggerDateInput(state);
                     }, 250);
                 }
-            }, true);
+            };
+            document.addEventListener('submit', runtime.campaignSubmitHandler, true);
             document.__mauticLocaleFixCampaignDateSubmitPatched = true;
         }
 
         return true;
+    }
+
+    function getQueryCollection(selector) {
+        try {
+            return document.querySelectorAll(selector);
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function isTruthyControl(control) {
+        if (!control) {
+            return false;
+        }
+
+        if (control.type === 'checkbox') {
+            return control.checked && control.value !== '0' && control.value !== 'false';
+        }
+
+        if ((control.type === 'radio') && !control.checked) {
+            return false;
+        }
+
+        return ['1', 'true', 'yes', 'on'].indexOf(String(control.value || '').toLowerCase()) !== -1 || control.checked === true;
+    }
+
+    function findTruthyNamedControl(selector) {
+        var controls = getQueryCollection(selector);
+        for (var i = 0; i < controls.length; i += 1) {
+            if (isTruthyControl(controls[i])) {
+                return controls[i];
+            }
+        }
+
+        return null;
+    }
+
+    function findFieldContainer(input) {
+        var node = input;
+        while (node && node !== document.documentElement) {
+            if (node.classList && (
+                node.classList.contains('form-group') ||
+                node.classList.contains('row') ||
+                node.classList.contains('control-group')
+            )) {
+                return node;
+            }
+            node = node.parentElement;
+        }
+
+        return input && input.parentElement ? input.parentElement : input;
+    }
+
+    function setDimmed(container, dimmed) {
+        if (!container || !container.classList) {
+            return;
+        }
+
+        container.classList.toggle('mauticlocalefix-dimmed', dimmed);
+        container.setAttribute('aria-disabled', dimmed ? 'true' : 'false');
+    }
+
+    function ensureSettingsStyle() {
+        if (document.getElementById('mauticlocalefix-settings-style')) {
+            return;
+        }
+
+        var style = document.createElement('style');
+        style.id = 'mauticlocalefix-settings-style';
+        style.textContent = [
+            '.mauticlocalefix-dimmed{opacity:.45;filter:grayscale(.2);}',
+            '.mauticlocalefix-dimmed select,.mauticlocalefix-dimmed input,.mauticlocalefix-dimmed button{pointer-events:none;}'
+        ].join('');
+        document.head.appendChild(style);
+    }
+
+    function syncSettingsFormState() {
+        var featureInputs = getQueryCollection([
+            'input[name*="calendar_enabled"]',
+            'select[name*="calendar_week_start"]',
+            'select[name*="calendar_date_format"]',
+            'input[name*="campaign_datetime_utc_submit"]'
+        ].join(','));
+        if (!featureInputs.length) {
+            return;
+        }
+
+        ensureSettingsStyle();
+
+        var publishedControl = findTruthyNamedControl([
+            'input[name$="[isPublished]"]',
+            'input[name*="[isPublished]"]',
+            'input[id$="_isPublished"]',
+            'input[name*="isPublished"]'
+        ].join(','));
+        var integrationActive = !!publishedControl;
+        var calendarControl = findTruthyNamedControl('input[name*="calendar_enabled"]');
+        var calendarActive = !!calendarControl;
+
+        Array.prototype.forEach.call(featureInputs, function (input) {
+            var name = String(input.name || input.id || '');
+            var container = findFieldContainer(input);
+            var dimmed = !integrationActive;
+
+            if (integrationActive && (
+                name.indexOf('calendar_week_start') !== -1 ||
+                name.indexOf('calendar_date_format') !== -1
+            )) {
+                dimmed = !calendarActive;
+            }
+
+            setDimmed(container, dimmed);
+        });
+    }
+
+    function deactivateRuntime() {
+        var $ = getQuery();
+        if (runtime.timer) {
+            window.clearInterval(runtime.timer);
+            runtime.timer = null;
+        }
+        if (runtime.observer) {
+            runtime.observer.disconnect();
+            runtime.observer = null;
+        }
+        if (runtime.observerTimer) {
+            window.clearTimeout(runtime.observerTimer);
+            runtime.observerTimer = null;
+        }
+        if (runtime.pageLoadedHandler) {
+            document.removeEventListener('mauticPageLoaded', runtime.pageLoadedHandler);
+            document.removeEventListener('ajaxComplete', runtime.pageLoadedHandler);
+            runtime.pageLoadedHandler = null;
+        }
+        if (runtime.domContentLoadedHandler) {
+            document.removeEventListener('DOMContentLoaded', runtime.domContentLoadedHandler);
+            runtime.domContentLoadedHandler = null;
+        }
+        if (runtime.campaignSubmitHandler) {
+            document.removeEventListener('submit', runtime.campaignSubmitHandler, true);
+            runtime.campaignSubmitHandler = null;
+            document.__mauticLocaleFixCampaignDateSubmitPatched = false;
+        }
+        if ($ && $.fn && $.fn.datetimepicker && $.fn.datetimepicker.__mauticLocaleFixOriginal) {
+            $.fn.datetimepicker = $.fn.datetimepicker.__mauticLocaleFixOriginal;
+        }
+        if (window.Mautic && window.Mautic.initDateRangePicker && window.Mautic.initDateRangePicker.__mauticLocaleFixOriginal) {
+            window.Mautic.initDateRangePicker = window.Mautic.initDateRangePicker.__mauticLocaleFixOriginal;
+        }
+        if (window.Mautic && window.Mautic.submitCampaignEvent && window.Mautic.submitCampaignEvent.__mauticLocaleFixOriginal) {
+            window.Mautic.submitCampaignEvent = window.Mautic.submitCampaignEvent.__mauticLocaleFixOriginal;
+        }
     }
 
     function applyPatch() {
@@ -750,33 +929,49 @@
         return patched || campaignPatched;
     }
 
-    var attempts = 0;
-    var timer = window.setInterval(function () {
-        attempts += 1;
-        if (applyPatch() || attempts >= 100) {
-            window.clearInterval(timer);
+    function installRuntimeLoop() {
+        var attempts = 0;
+        runtime.timer = window.setInterval(function () {
+            attempts += 1;
+            if (applyPatch() || attempts >= 100) {
+                window.clearInterval(runtime.timer);
+                runtime.timer = null;
+            }
+        }, 100);
+
+        runtime.domContentLoadedHandler = applyPatch;
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', runtime.domContentLoadedHandler);
+        } else {
+            applyPatch();
         }
-    }, 100);
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', applyPatch);
-    } else {
-        applyPatch();
+        runtime.pageLoadedHandler = applyPatch;
+        document.addEventListener('mauticPageLoaded', runtime.pageLoadedHandler);
+        document.addEventListener('ajaxComplete', runtime.pageLoadedHandler);
+
+        if ('MutationObserver' in window) {
+            runtime.observer = new MutationObserver(function () {
+                window.clearTimeout(runtime.observerTimer);
+                runtime.observerTimer = window.setTimeout(applyPatch, 50);
+            });
+
+            runtime.observer.observe(document.documentElement, {
+                childList: true,
+                subtree: true
+            });
+        }
     }
 
-    document.addEventListener('mauticPageLoaded', applyPatch);
-    document.addEventListener('ajaxComplete', applyPatch);
+    syncSettingsFormState();
+    document.addEventListener('change', syncSettingsFormState, true);
+    document.addEventListener('mauticPageLoaded', syncSettingsFormState);
 
-    if ('MutationObserver' in window) {
-        var observerTimer = null;
-        var observer = new MutationObserver(function () {
-            window.clearTimeout(observerTimer);
-            observerTimer = window.setTimeout(applyPatch, 50);
-        });
-
-        observer.observe(document.documentElement, {
-            childList: true,
-            subtree: true
-        });
+    if (!pluginEnabled || (!calendarEnabled && !campaignDateTimeUtcSubmit)) {
+        deactivateRuntime();
+        return;
     }
+
+    deactivateRuntime();
+    installRuntimeLoop();
 })(window);

@@ -116,6 +116,7 @@ function testDisabledConfigDoesNothing() {
   };
 
   const env = runPlugin({
+    enabled: false,
     calendarEnabled: false,
     campaignDateTimeUtcSubmit: false,
     mauticTimezone: 'Europe/Belgrade',
@@ -130,6 +131,7 @@ function testDisabledConfigDoesNothing() {
 function testCampaignSubmitConvertsLocalMauticTimeToUtc() {
   const seen = [];
   const env = runPlugin({
+    enabled: true,
     calendarEnabled: false,
     campaignDateTimeUtcSubmit: true,
     mauticTimezone: 'Europe/Belgrade',
@@ -162,6 +164,7 @@ function testCampaignSubmitDoesNotPatchDatepickerWhenCalendarFixIsOff() {
   query.fn = {datetimepicker};
 
   runPlugin({
+    enabled: true,
     calendarEnabled: false,
     campaignDateTimeUtcSubmit: true,
     mauticTimezone: 'Europe/Belgrade',
@@ -177,6 +180,7 @@ function testCampaignSubmitDoesNotPatchDatepickerWhenCalendarFixIsOff() {
 }
 
 function createDatepickerQuery(original, elements = []) {
+  original.defaults = original.defaults || {};
   const query = function () {
     return {
       length: elements.length,
@@ -196,7 +200,7 @@ function createDatepickerQuery(original, elements = []) {
   return query;
 }
 
-function testThirdPartyDatePickerKeepsItsFormatWhileGettingWeekStart() {
+function testThirdPartyDatePickerKeepsItsOptionsUntouched() {
   const seen = [];
   const thirdPartyInput = createInput('', {
     attrs: {'data-toggle': 'date'},
@@ -209,6 +213,7 @@ function testThirdPartyDatePickerKeepsItsFormatWhileGettingWeekStart() {
   const query = createDatepickerQuery(original);
 
   runPlugin({
+    enabled: true,
     calendarEnabled: true,
     campaignDateTimeUtcSubmit: false,
     weekStart: 1,
@@ -225,12 +230,13 @@ function testThirdPartyDatePickerKeepsItsFormatWhileGettingWeekStart() {
   });
 
   assert.strictEqual(seen.length, 1);
-  assert.strictEqual(seen[0].dayOfWeekStart, 1);
+  assert.strictEqual(seen[0].dayOfWeekStart, undefined);
   assert.strictEqual(seen[0].format, 'Y-m-d');
   assert.strictEqual(typeof seen[0].onSelectDate, 'function');
+  assert.strictEqual(query.fn.datetimepicker.defaults.dayOfWeekStart, 1);
 }
 
-function testMauticDateRangeStillGetsConfiguredDisplayFormat() {
+function testMauticDateRangeGetsWeekStartWithoutChangingFormat() {
   const seen = [];
   const coreInput = createInput('', {
     matches(selector) {
@@ -245,6 +251,7 @@ function testMauticDateRangeStillGetsConfiguredDisplayFormat() {
   const query = createDatepickerQuery(original);
 
   runPlugin({
+    enabled: true,
     calendarEnabled: true,
     campaignDateTimeUtcSubmit: false,
     weekStart: 1,
@@ -261,13 +268,81 @@ function testMauticDateRangeStillGetsConfiguredDisplayFormat() {
 
   assert.strictEqual(seen.length, 1);
   assert.strictEqual(seen[0].dayOfWeekStart, 1);
+  assert.strictEqual(seen[0].format, 'Y-m-d');
+}
+
+function testExplicitOptInDateRangeGetsConfiguredDisplayFormat() {
+  const seen = [];
+  const optInInput = createInput('', {
+    attrs: {'data-mautic-locale-fix-format': '1'},
+  });
+  const original = function (options) {
+    seen.push(options);
+
+    return this;
+  };
+  const query = createDatepickerQuery(original);
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: true,
+    campaignDateTimeUtcSubmit: false,
+    weekStart: 1,
+    dateFormat: 'locale_medium',
+  }, {query});
+
+  query.fn.datetimepicker.call({
+    0: optInInput,
+    length: 1,
+  }, {
+    timepicker: false,
+    format: 'Y-m-d',
+  });
+
+  assert.strictEqual(seen.length, 1);
+  assert.strictEqual(seen[0].dayOfWeekStart, 1);
   assert.strictEqual(seen[0].format, 'd M Y');
+}
+
+function testActiveDisabledStopsAllFeaturePatches() {
+  const seen = [];
+  const original = function (options) {
+    seen.push(options);
+
+    return this;
+  };
+  const query = createDatepickerQuery(original);
+  const calls = [];
+
+  const env = runPlugin({
+    enabled: false,
+    calendarEnabled: true,
+    campaignDateTimeUtcSubmit: true,
+    mauticTimezone: 'Europe/Belgrade',
+  }, {
+    query,
+    mautic: {
+      submitCampaignEvent() {
+        calls.push(env.input.value);
+      },
+    },
+  });
+
+  query.fn.datetimepicker({format: 'Y-m-d'});
+  env.window.Mautic.submitCampaignEvent();
+
+  assert.strictEqual(query.fn.datetimepicker, original);
+  assert.deepStrictEqual(seen, [{format: 'Y-m-d'}]);
+  assert.deepStrictEqual(calls, ['2026-06-29 15:00']);
+  assert.strictEqual(env.submitListeners.length, 0);
 }
 
 testDisabledConfigDoesNothing();
 testCampaignSubmitConvertsLocalMauticTimeToUtc();
 testCampaignSubmitDoesNotPatchDatepickerWhenCalendarFixIsOff();
-testThirdPartyDatePickerKeepsItsFormatWhileGettingWeekStart();
-testMauticDateRangeStillGetsConfiguredDisplayFormat();
+testThirdPartyDatePickerKeepsItsOptionsUntouched();
+testMauticDateRangeGetsWeekStartWithoutChangingFormat();
+testExplicitOptInDateRangeGetsConfiguredDisplayFormat();
+testActiveDisabledStopsAllFeaturePatches();
 
 console.log('locale-fix tests passed');

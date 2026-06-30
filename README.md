@@ -6,17 +6,18 @@ Mautic plugin that adds regional UI settings without patching Mautic core files.
 
 - Calendar week start in Mautic date picker popups.
 - Calendar language follows the current Mautic interface locale.
-- Human-readable date display format choices for dashboard date ranges and
-  simple table date cells.
+- Human-readable date display format choices for fields explicitly marked with
+  `data-mautic-locale-fix-format="1"`.
 - Date-only formatting is intentionally limited to date-only pickers so
   date/time campaign fields keep Mautic's `Y-m-d H:i` format.
 - Optional campaign date/time submit workaround. When Mautic parses campaign
   event dates as UTC instead of the configured Mautic timezone, the plugin can
   submit only the campaign event `triggerDate` field as UTC while keeping the
   operator-facing value in local Mautic time.
-- The browser asset is fail-closed: if the integration is disabled or its
-  runtime config is not injected, the JavaScript exits without touching Mautic
-  date pickers.
+- The browser asset is fail-closed: if the integration is disabled, it removes
+  its wrappers where possible and stops touching Mautic date pickers.
+- Third-party date pickers keep their own input format and callbacks unless
+  they explicitly opt in with Mautic Locale Fix data attributes.
 - Existing picker options are applied idempotently, avoiding repeated
   `setOptions` calls while a calendar popup is open.
 - Default value: Monday.
