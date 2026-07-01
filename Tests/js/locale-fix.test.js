@@ -28,6 +28,24 @@ function createInput(value, options = {}) {
   };
 }
 
+function createTextElement(text, options = {}) {
+  const attrs = Object.assign({}, options.attrs || {});
+
+  return {
+    textContent: text,
+    children: options.children || [],
+    getAttribute(name) {
+      return Object.prototype.hasOwnProperty.call(attrs, name) ? attrs[name] : null;
+    },
+    setAttribute(name, nextValue) {
+      attrs[name] = String(nextValue);
+    },
+    matches(selector) {
+      return typeof options.matches === 'function' ? options.matches(selector) : false;
+    },
+  };
+}
+
 function runPlugin(config, options = {}) {
   const timeouts = [];
   const submitListeners = [];
@@ -51,7 +69,11 @@ function runPlugin(config, options = {}) {
     querySelector(selector) {
       return selector === 'form[name="campaignevent"]' ? form : null;
     },
-    querySelectorAll() {
+    querySelectorAll(selector) {
+      if (typeof options.querySelectorAll === 'function') {
+        return options.querySelectorAll(selector);
+      }
+
       return [];
     },
     addEventListener(type, listener) {
@@ -436,6 +458,31 @@ function testCalendarFixRestoresLegacyDatepickerWrapper() {
   assert.strictEqual(query.fn.datetimepicker.defaults.dayOfWeekStart, 1);
 }
 
+function testCalendarFixFormatsPlainTableDateCells() {
+  const dateCell = createTextElement('June 28, 2026');
+  const campaignNameCell = createTextElement('Isporuka 29.07.2026. podsetnik 24h');
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: true,
+    campaignDateTimeUtcSubmit: false,
+    weekStart: 1,
+    dateFormat: 'locale_medium',
+    locale: 'en_US',
+  }, {
+    querySelectorAll(selector) {
+      if (selector.includes('table td')) {
+        return [dateCell, campaignNameCell];
+      }
+
+      return [];
+    },
+  });
+
+  assert.strictEqual(dateCell.textContent, '28 Jun 2026');
+  assert.strictEqual(campaignNameCell.textContent, 'Isporuka 29.07.2026. podsetnik 24h');
+}
+
 testDisabledConfigDoesNothing();
 testCampaignSubmitConvertsLocalMauticTimeToUtc();
 testCampaignSubmitDoesNotPatchDatepickerWhenCalendarFixIsOff();
@@ -446,5 +493,6 @@ testCalendarFixUpdatesExistingDateRangePickerOptions();
 testActiveDisabledStopsAllFeaturePatches();
 testActiveDisabledRestoresLegacyDatepickerWrapper();
 testCalendarFixRestoresLegacyDatepickerWrapper();
+testCalendarFixFormatsPlainTableDateCells();
 
 console.log('locale-fix tests passed');

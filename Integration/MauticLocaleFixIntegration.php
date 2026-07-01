@@ -22,6 +22,8 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public const CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD = 'campaign_datetime_utc_submit';
 
+    public const GMAIL_IMAGE_PROXY_OPEN_FIELD = 'gmail_image_proxy_open';
+
     public function getName()
     {
         return self::NAME;
@@ -144,6 +146,20 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                         'tooltip' => 'mautic.integration.mauticlocalefix.campaign_datetime_utc_submit.tooltip',
                     ],
                 ]
+            )
+            ->add(
+                self::GMAIL_IMAGE_PROXY_OPEN_FIELD,
+                YesNoButtonGroupType::class,
+                [
+                    'label' => 'mautic.integration.mauticlocalefix.gmail_image_proxy_open',
+                    'data'  => array_key_exists(self::GMAIL_IMAGE_PROXY_OPEN_FIELD, $data)
+                        ? (bool) $data[self::GMAIL_IMAGE_PROXY_OPEN_FIELD]
+                        : true,
+                    'attr'  => [
+                        'class'   => 'mauticlocalefix-feature-toggle',
+                        'tooltip' => 'mautic.integration.mauticlocalefix.gmail_image_proxy_open.tooltip',
+                    ],
+                ]
             );
     }
 
@@ -162,11 +178,7 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public function isCalendarFixEnabled(): bool
     {
-        if (!array_key_exists(self::CALENDAR_ENABLED_FIELD, $this->keys)) {
-            return true;
-        }
-
-        return (bool) $this->keys[self::CALENDAR_ENABLED_FIELD];
+        return $this->isToggleEnabled(self::CALENDAR_ENABLED_FIELD, true);
     }
 
     public function getCalendarWeekStart(): int
@@ -192,10 +204,34 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public function isCampaignDateTimeUtcSubmitEnabled(): bool
     {
-        if (!array_key_exists(self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD, $this->keys)) {
+        return $this->isToggleEnabled(self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD, true);
+    }
+
+    public function isGmailImageProxyOpenEnabled(): bool
+    {
+        return $this->isToggleEnabled(self::GMAIL_IMAGE_PROXY_OPEN_FIELD, true);
+    }
+
+    private function isToggleEnabled(string $field, bool $default): bool
+    {
+        if (!array_key_exists($field, $this->keys)) {
+            return $default;
+        }
+
+        $value = $this->keys[$field];
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+        if (in_array($normalized, ['1', 'true', 'yes', 'on', 'enabled'], true)) {
             return true;
         }
 
-        return (bool) $this->keys[self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD];
+        if (in_array($normalized, ['0', 'false', 'no', 'off', 'disabled', ''], true)) {
+            return false;
+        }
+
+        return (bool) $value;
     }
 }

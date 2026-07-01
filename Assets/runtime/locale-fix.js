@@ -37,42 +37,54 @@
     var monthNumbers = {
         jan: 0,
         january: 0,
+        januar: 0,
+        januara: 0,
         'янв': 0,
         'январь': 0,
         'января': 0,
         feb: 1,
         february: 1,
+        februar: 1,
+        februara: 1,
         'фев': 1,
         'февраль': 1,
         'февраля': 1,
         mar: 2,
         march: 2,
+        mart: 2,
+        marta: 2,
         'мар': 2,
         'март': 2,
         'марта': 2,
         apr: 3,
         april: 3,
+        aprila: 3,
         'апр': 3,
         'апрель': 3,
         'апреля': 3,
         may: 4,
+        maj: 4,
+        maja: 4,
         'май': 4,
         'мая': 4,
         jun: 5,
         june: 5,
         juni: 5,
+        juna: 5,
         'июн': 5,
         'июнь': 5,
         'июня': 5,
         jul: 6,
         july: 6,
         juli: 6,
+        jula: 6,
         'июл': 6,
         'июль': 6,
         'июля': 6,
         aug: 7,
         august: 7,
         avgust: 7,
+        avgusta: 7,
         'авг': 7,
         'август': 7,
         'августа': 7,
@@ -80,24 +92,28 @@
         sept: 8,
         september: 8,
         septembar: 8,
+        septembra: 8,
         'сен': 8,
         'сентябрь': 8,
         'сентября': 8,
         oct: 9,
         october: 9,
         oktobar: 9,
+        oktobra: 9,
         'окт': 9,
         'октябрь': 9,
         'октября': 9,
         nov: 10,
         november: 10,
         novembar: 10,
+        novembra: 10,
         'ноя': 10,
         'ноябрь': 10,
         'ноября': 10,
         dec: 11,
         december: 11,
         decembar: 11,
+        decembra: 11,
         'дек': 11,
         'декабрь': 11,
         'декабря': 11
@@ -620,6 +636,13 @@
         var inputs = document.querySelectorAll('[data-mautic-locale-fix-format="1"]');
 
         Array.prototype.forEach.call(inputs, formatDateInputValue);
+        formatPlainDateTextElements([
+            'table td',
+            'table th',
+            '[role="cell"]',
+            '[data-column-name*="date"]',
+            '[data-column-alias*="date"]'
+        ].join(','));
 
         if (!$ || typeof $.fn !== 'object') {
             return;
@@ -635,6 +658,35 @@
             var formatted = formatDateText(trimmed);
             if (formatted && formatted !== trimmed) {
                 this.textContent = original.replace(trimmed, formatted);
+            }
+        });
+    }
+
+    function formatPlainDateTextElements(selector) {
+        var elements;
+        try {
+            elements = document.querySelectorAll(selector);
+        } catch (e) {
+            return;
+        }
+
+        Array.prototype.forEach.call(elements, function (element) {
+            var original;
+            var trimmed;
+            var formatted;
+            if (!element || element.children.length > 0) {
+                return;
+            }
+
+            original = element.textContent || '';
+            trimmed = original.replace(/\s+/g, ' ').trim();
+            if (!trimmed || trimmed.length > 40) {
+                return;
+            }
+
+            formatted = formatDateText(trimmed);
+            if (formatted && formatted !== trimmed) {
+                element.textContent = original.replace(trimmed, formatted);
             }
         });
     }
@@ -833,7 +885,8 @@
             'input[name*="calendar_enabled"]',
             'select[name*="calendar_week_start"]',
             'select[name*="calendar_date_format"]',
-            'input[name*="campaign_datetime_utc_submit"]'
+            'input[name*="campaign_datetime_utc_submit"]',
+            'input[name*="gmail_image_proxy_open"]'
         ].join(','));
         if (!featureInputs.length) {
             return;
@@ -948,11 +1001,9 @@
     restoreLegacyDatePickerWrappers(getQuery());
     restoreCampaignSubmitWrapper();
 
-    if (pluginEnabled) {
-        syncSettingsFormState();
-        document.addEventListener('change', syncSettingsFormState, true);
-        document.addEventListener('mauticPageLoaded', syncSettingsFormState);
-    }
+    syncSettingsFormState();
+    document.addEventListener('change', syncSettingsFormState, true);
+    document.addEventListener('mauticPageLoaded', syncSettingsFormState);
 
     if (!pluginEnabled || (!calendarEnabled && !campaignDateTimeUtcSubmit)) {
         deactivateRuntime();
