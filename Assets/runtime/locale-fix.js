@@ -33,6 +33,13 @@
         numeric_dmy: 'd.m.Y',
         numeric_mdy: 'm/d/Y'
     };
+    var nativeMauticMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var pickerShortMonthNamesByLanguage = {
+        ru: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+        sr: ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'avg', 'sep', 'okt', 'nov', 'dec']
+    };
+    var dateRangeFromSelector = '#daterange_date_from,input[name="daterange[date_from]"]';
+    var dateRangeToSelector = '#daterange_date_to,input[name="daterange[date_to]"]';
 
     var monthNumbers = {
         jan: 0,
@@ -259,12 +266,7 @@
             return false;
         }
 
-        return element.matches([
-            '#daterange_date_from',
-            '#daterange_date_to',
-            'input[name="daterange[date_from]"]',
-            'input[name="daterange[date_to]"]'
-        ].join(','));
+        return element.matches(dateRangeFromSelector + ',' + dateRangeToSelector);
     }
 
     function shouldApplyDisplayFormatToElement(element) {
@@ -588,6 +590,14 @@
         }
     }
 
+    function formatNativeMauticDate(date) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            return null;
+        }
+
+        return nativeMauticMonthNames[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
+    }
+
     function formatDateText(value) {
         var date = parseDateText(value);
         if (!date) {
@@ -606,6 +616,222 @@
         if (formatted && formatted !== input.value.trim()) {
             input.value = formatted;
         }
+    }
+
+    function getDateRangeMonthName(date) {
+        var locale = String(getConfiguredLocale() || '').replace('_', '-').toLowerCase();
+        var language = locale.split('-')[0];
+        var monthNames = pickerShortMonthNamesByLanguage[language];
+        var month;
+        if (monthNames) {
+            return monthNames[date.getMonth()];
+        }
+
+        try {
+            month = new Intl.DateTimeFormat(getIntlLocale(), {month: 'short'}).format(date).replace(/\.$/, '');
+            return month || nativeMauticMonthNames[date.getMonth()];
+        } catch (e) {
+            return nativeMauticMonthNames[date.getMonth()];
+        }
+    }
+
+    function formatDateRangeDisplayDate(date) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            return null;
+        }
+
+        return getDateRangeMonthName(date) + ' ' + date.getDate() + ', ' + date.getFullYear();
+    }
+
+    function formatDateRangeInputValue(input) {
+        var date;
+        var formatted;
+        if (!input || !input.value) {
+            return;
+        }
+
+        date = parseDateText(input.value);
+        formatted = date ? formatDateRangeDisplayDate(date) : null;
+        if (formatted && formatted !== input.value.trim()) {
+            input.value = formatted;
+        }
+    }
+
+    function normalizeDateRangeInputForSubmit(input) {
+        if (!input || !input.value) {
+            return null;
+        }
+
+        var original = input.value.trim();
+        var date = parseDateText(original);
+        var converted = date ? formatNativeMauticDate(date) : null;
+        if (!converted || converted === original) {
+            return null;
+        }
+
+        input.value = converted;
+
+        return {
+            input: input,
+            original: original,
+            converted: converted
+        };
+    }
+
+    function restoreDateRangeInput(state) {
+        if (!state || !state.input || state.input.value !== state.converted) {
+            return;
+        }
+
+        state.input.value = state.original;
+    }
+
+    function queryOne(selector, root) {
+        try {
+            return (root || document).querySelector(selector);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function queryAll(selector, root) {
+        try {
+            return (root || document).querySelectorAll(selector);
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function closestDateRangeForm(element) {
+        if (!element || typeof element.closest !== 'function') {
+            return null;
+        }
+
+        try {
+            return element.closest('form');
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function parseDateRangeLimit(value) {
+        var parsed = parseDateText(value);
+        if (parsed) {
+            return parsed;
+        }
+
+        var nativeDate = new Date(value);
+        if (nativeDate instanceof Date && !isNaN(nativeDate.getTime())) {
+            return nativeDate;
+        }
+
+        return false;
+    }
+
+    function setDateRangePickerOptionsOnce($, element, role, pairedElement) {
+        var signature = 'range=' + role + ';weekStart=' + String(weekStart);
+        var options;
+        if (!element || element.getAttribute('data-mautic-locale-fix-range-options') === signature) {
+            return;
+        }
+
+        options = {
+            dayOfWeekStart: weekStart,
+            onShow: function () {
+                var pairedDate = pairedElement && pairedElement.value ? parseDateRangeLimit(pairedElement.value) : false;
+                if (role === 'from') {
+                    this.setOptions({maxDate: pairedDate || false});
+                } else {
+                    this.setOptions({
+                        maxDate: new Date(),
+                        minDate: pairedDate || false
+                    });
+                }
+            }
+        };
+
+        try {
+            $(element).datetimepicker('setOptions', options);
+            element.setAttribute('data-mautic-locale-fix-range-options', signature);
+        } catch (e) {
+        }
+    }
+
+    function findDateRangePair(fromInput) {
+        var form = closestDateRangeForm(fromInput);
+        var toInput = form ? queryOne(dateRangeToSelector, form) : null;
+        if (!toInput) {
+            toInput = queryOne(dateRangeToSelector);
+        }
+
+        return {
+            from: fromInput,
+            to: toInput
+        };
+    }
+
+    function applyDateRangePair($, fromInput, toInput) {
+        if (!fromInput || !toInput) {
+            return;
+        }
+
+        if ($ && typeof $.fn === 'object' && typeof $.fn.datetimepicker === 'function') {
+            setDateRangePickerOptionsOnce($, fromInput, 'from', toInput);
+            setDateRangePickerOptionsOnce($, toInput, 'to', fromInput);
+        }
+
+        formatDateRangeInputValue(fromInput);
+        formatDateRangeInputValue(toInput);
+    }
+
+    function updateDateRangeInputs($) {
+        var seen = [];
+        var fromInputs = queryAll(dateRangeFromSelector);
+
+        Array.prototype.forEach.call(fromInputs, function (fromInput) {
+            var pair = findDateRangePair(fromInput);
+            if (!pair.from || !pair.to || seen.indexOf(pair.from) !== -1) {
+                return;
+            }
+            seen.push(pair.from);
+            applyDateRangePair($, pair.from, pair.to);
+        });
+    }
+
+    function isDateRangeForm(form) {
+        if (!form || typeof form.querySelector !== 'function') {
+            return false;
+        }
+
+        return !!(queryOne(dateRangeFromSelector, form) || queryOne(dateRangeToSelector, form));
+    }
+
+    function normalizeDateRangeForm(form) {
+        var states = [];
+        var state;
+        if (!isDateRangeForm(form)) {
+            return null;
+        }
+
+        state = normalizeDateRangeInputForSubmit(queryOne(dateRangeFromSelector, form));
+        if (state) {
+            states.push(state);
+        }
+
+        state = normalizeDateRangeInputForSubmit(queryOne(dateRangeToSelector, form));
+        if (state) {
+            states.push(state);
+        }
+
+        return states.length ? states : null;
+    }
+
+    function restoreDateRangeInputs(states) {
+        if (!states || !states.length) {
+            return;
+        }
+
+        states.forEach(restoreDateRangeInput);
     }
 
     function pickerOptionsSignature(options) {
@@ -636,6 +862,7 @@
         var inputs = document.querySelectorAll('[data-mautic-locale-fix-format="1"]');
 
         Array.prototype.forEach.call(inputs, formatDateInputValue);
+        updateDateRangeInputs($);
         formatPlainDateTextElements([
             'table td',
             'table th',
@@ -699,6 +926,7 @@
         }
 
         applyLocale($);
+        updateDateRangeInputs($);
         $([
             '#daterange_date_from',
             '#daterange_date_to',
@@ -735,6 +963,9 @@
         var original = window.Mautic.initDateRangePicker;
         var patched = function () {
             var result = original.apply(this, arguments);
+            var fromSelector = arguments.length > 0 && arguments[0] ? arguments[0] : dateRangeFromSelector;
+            var toSelector = arguments.length > 1 && arguments[1] ? arguments[1] : dateRangeToSelector;
+            applyDateRangePair($, queryOne(fromSelector), queryOne(toSelector));
             updateExistingPickers($);
 
             return result;
@@ -755,6 +986,27 @@
         applyLocale($);
         applyDateTimePickerDefaults($);
         runtime.calendarDefaultsApplied = true;
+
+        return true;
+    }
+
+    function patchDateRangeSubmit() {
+        if (document.__mauticLocaleFixDateRangeSubmitPatched === true) {
+            return true;
+        }
+
+        runtime.dateRangeSubmitHandler = function (event) {
+            var states = normalizeDateRangeForm(event.target);
+            if (!states) {
+                return;
+            }
+
+            window.setTimeout(function () {
+                restoreDateRangeInputs(states);
+            }, 250);
+        };
+        document.addEventListener('submit', runtime.dateRangeSubmitHandler, true);
+        document.__mauticLocaleFixDateRangeSubmitPatched = true;
 
         return true;
     }
@@ -948,6 +1200,11 @@
             runtime.campaignSubmitHandler = null;
             document.__mauticLocaleFixCampaignDateSubmitPatched = false;
         }
+        if (runtime.dateRangeSubmitHandler) {
+            document.removeEventListener('submit', runtime.dateRangeSubmitHandler, true);
+            runtime.dateRangeSubmitHandler = null;
+            document.__mauticLocaleFixDateRangeSubmitPatched = false;
+        }
         restoreLegacyDatePickerWrappers($);
         restoreCampaignSubmitWrapper();
     }
@@ -958,6 +1215,7 @@
         var campaignPatched = patchCampaignDateTimeSubmit();
         if (calendarEnabled) {
             patchMauticDateRangePicker($);
+            patchDateRangeSubmit();
             updateExistingPickers($);
         }
 

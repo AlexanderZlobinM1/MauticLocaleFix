@@ -67,6 +67,13 @@ function runPlugin(config, options = {}) {
       },
     },
     querySelector(selector) {
+      if (typeof options.querySelector === 'function') {
+        const match = options.querySelector(selector);
+        if (match) {
+          return match;
+        }
+      }
+
       return selector === 'form[name="campaignevent"]' ? form : null;
     },
     querySelectorAll(selector) {
@@ -483,6 +490,110 @@ function testCalendarFixFormatsPlainTableDateCells() {
   assert.strictEqual(campaignNameCell.textContent, 'Isporuka 29.07.2026. podsetnik 24h');
 }
 
+function testDateRangeInitialValuesAreLocalizedButSubmitStaysNative() {
+  const fromInput = createInput('Jun 4, 2026', {
+    matches(selector) {
+      return selector.includes('#daterange_date_from') || selector.includes('daterange[date_from]');
+    },
+  });
+  const toInput = createInput('Jul 3, 2026', {
+    matches(selector) {
+      return selector.includes('#daterange_date_to') || selector.includes('daterange[date_to]');
+    },
+  });
+  const dateRangeForm = {
+    querySelector(selector) {
+      if (selector.includes('date_from')) {
+        return fromInput;
+      }
+      if (selector.includes('date_to')) {
+        return toInput;
+      }
+
+      return null;
+    },
+    matches(selector) {
+      return selector === 'form[name="daterange"]';
+    },
+  };
+  fromInput.closest = () => dateRangeForm;
+  toInput.closest = () => dateRangeForm;
+
+  const original = function () {
+    return this;
+  };
+  const query = createDatepickerQuery(original, [fromInput, toInput]);
+  const env = runPlugin({
+    enabled: true,
+    calendarEnabled: true,
+    campaignDateTimeUtcSubmit: false,
+    weekStart: 1,
+    dateFormat: 'locale_medium',
+    locale: 'ru',
+  }, {
+    query,
+    querySelector(selector) {
+      if (selector.includes('date_from')) {
+        return fromInput;
+      }
+      if (selector.includes('date_to')) {
+        return toInput;
+      }
+
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector.includes('date_from')) {
+        return [fromInput];
+      }
+      if (selector.includes('data-mautic-locale-fix-date-text')) {
+        return [];
+      }
+      if (selector.includes('table td')) {
+        return [];
+      }
+
+      return [];
+    },
+  });
+
+  assert.strictEqual(fromInput.value, 'Июн 4, 2026');
+  assert.strictEqual(toInput.value, 'Июл 3, 2026');
+
+  const rangeCalls = query.__setOptionsCalls.filter((call) => typeof call.options.onShow === 'function');
+  assert.ok(rangeCalls.length >= 2);
+
+  const fromOptions = rangeCalls.find((call) => call.element === fromInput).options;
+  const fromLimits = [];
+  fromOptions.onShow.call({
+    setOptions(options) {
+      fromLimits.push(options);
+    },
+  });
+  assert.strictEqual(fromLimits[0].maxDate.getFullYear(), 2026);
+  assert.strictEqual(fromLimits[0].maxDate.getMonth(), 6);
+  assert.strictEqual(fromLimits[0].maxDate.getDate(), 3);
+
+  const toOptions = rangeCalls.find((call) => call.element === toInput).options;
+  const toLimits = [];
+  toOptions.onShow.call({
+    setOptions(options) {
+      toLimits.push(options);
+    },
+  });
+  assert.strictEqual(toLimits[0].minDate.getFullYear(), 2026);
+  assert.strictEqual(toLimits[0].minDate.getMonth(), 5);
+  assert.strictEqual(toLimits[0].minDate.getDate(), 4);
+
+  env.submitListeners[0]({target: dateRangeForm});
+  assert.strictEqual(fromInput.value, 'Jun 4, 2026');
+  assert.strictEqual(toInput.value, 'Jul 3, 2026');
+
+  env.flushTimeouts();
+  assert.strictEqual(fromInput.value, 'Июн 4, 2026');
+  assert.strictEqual(toInput.value, 'Июл 3, 2026');
+}
+
 testDisabledConfigDoesNothing();
 testCampaignSubmitConvertsLocalMauticTimeToUtc();
 testCampaignSubmitDoesNotPatchDatepickerWhenCalendarFixIsOff();
@@ -494,5 +605,6 @@ testActiveDisabledStopsAllFeaturePatches();
 testActiveDisabledRestoresLegacyDatepickerWrapper();
 testCalendarFixRestoresLegacyDatepickerWrapper();
 testCalendarFixFormatsPlainTableDateCells();
+testDateRangeInitialValuesAreLocalizedButSubmitStaysNative();
 
 console.log('locale-fix tests passed');

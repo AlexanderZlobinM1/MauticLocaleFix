@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.20';
+    private const ASSET_VERSION = '1.0.21';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -102,6 +102,11 @@ class AssetSubscriber implements EventSubscriberInterface
             document.removeEventListener('submit', runtime.campaignSubmitHandler, true);
             runtime.campaignSubmitHandler = null;
             document.__mauticLocaleFixCampaignDateSubmitPatched = false;
+        }
+        if (runtime.dateRangeSubmitHandler) {
+            document.removeEventListener('submit', runtime.dateRangeSubmitHandler, true);
+            runtime.dateRangeSubmitHandler = null;
+            document.__mauticLocaleFixDateRangeSubmitPatched = false;
         }
     }
     if ($ && $.fn && $.fn.datetimepicker && $.fn.datetimepicker.__mauticLocaleFixOriginal) {

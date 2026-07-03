@@ -21,6 +21,10 @@ Mautic plugin that adds regional UI settings without patching Mautic core files.
 - Date-only table cells that contain a recognized standalone date are formatted
   according to the configured calendar date format. Mixed text such as campaign
   names is left unchanged.
+- Dashboard date range fields are localized immediately on page load, not only
+  after opening the picker. Before submit, those values are temporarily
+  normalized back to Mautic's native `M j, Y` format so the backend keeps parsing
+  the filter range normally.
 - The browser asset is fail-closed: if the integration is disabled, it removes
   its wrappers where possible and stops touching Mautic date pickers.
 - Third-party date pickers keep their own input format and callbacks unless
