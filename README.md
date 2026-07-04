@@ -14,9 +14,11 @@ Mautic plugin that adds regional UI settings without patching Mautic core files.
   event dates as UTC instead of the configured Mautic timezone, the plugin can
   submit only the campaign event `triggerDate` field as UTC while keeping the
   operator-facing value in local Mautic time.
-- Optional Gmail/Google image proxy email-open workaround for Mautic 7. The
-  plugin can count Gmail image proxy requests to `/email/*.gif` tracking pixels
-  as email reads without changing Mautic core files. Other bot filtering remains
+- Optional Gmail/Google image proxy email-open workaround for Mautic 7 only.
+  On Mautic 7, the plugin can count Gmail image proxy requests to
+  `/email/*.gif` tracking pixels as email reads without changing Mautic core
+  files. On other Mautic majors this setting is hidden and the workaround is
+  disabled even if an old saved key exists. Other bot filtering remains
   untouched.
 - Date-only table cells that contain a recognized standalone date are formatted
   according to the configured calendar date format. Mixed text such as campaign

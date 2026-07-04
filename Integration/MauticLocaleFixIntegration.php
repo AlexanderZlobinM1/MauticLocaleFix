@@ -146,21 +146,26 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                         'tooltip' => 'mautic.integration.mauticlocalefix.campaign_datetime_utc_submit.tooltip',
                     ],
                 ]
-            )
-            ->add(
-                self::GMAIL_IMAGE_PROXY_OPEN_FIELD,
-                YesNoButtonGroupType::class,
-                [
-                    'label' => 'mautic.integration.mauticlocalefix.gmail_image_proxy_open',
-                    'data'  => array_key_exists(self::GMAIL_IMAGE_PROXY_OPEN_FIELD, $data)
-                        ? (bool) $data[self::GMAIL_IMAGE_PROXY_OPEN_FIELD]
-                        : true,
-                    'attr'  => [
-                        'class'   => 'mauticlocalefix-feature-toggle',
-                        'tooltip' => 'mautic.integration.mauticlocalefix.gmail_image_proxy_open.tooltip',
-                    ],
-                ]
             );
+
+        if (!$this->isGmailImageProxyOpenSupported()) {
+            return;
+        }
+
+        $builder->add(
+            self::GMAIL_IMAGE_PROXY_OPEN_FIELD,
+            YesNoButtonGroupType::class,
+            [
+                'label' => 'mautic.integration.mauticlocalefix.gmail_image_proxy_open',
+                'data'  => array_key_exists(self::GMAIL_IMAGE_PROXY_OPEN_FIELD, $data)
+                    ? (bool) $data[self::GMAIL_IMAGE_PROXY_OPEN_FIELD]
+                    : true,
+                'attr'  => [
+                    'class'   => 'mauticlocalefix-feature-toggle',
+                    'tooltip' => 'mautic.integration.mauticlocalefix.gmail_image_proxy_open.tooltip',
+                ],
+            ]
+        );
     }
 
     public function getFormNotes($section)
@@ -209,7 +214,23 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public function isGmailImageProxyOpenEnabled(): bool
     {
-        return $this->isToggleEnabled(self::GMAIL_IMAGE_PROXY_OPEN_FIELD, true);
+        return $this->isGmailImageProxyOpenSupported() &&
+            $this->isToggleEnabled(self::GMAIL_IMAGE_PROXY_OPEN_FIELD, true);
+    }
+
+    public function isGmailImageProxyOpenSupported(): bool
+    {
+        return 7 === self::getMauticMajorVersion();
+    }
+
+    private static function getMauticMajorVersion(): ?int
+    {
+        $version = defined('MAUTIC_VERSION') ? (string) MAUTIC_VERSION : '';
+        if (!preg_match('/^(\d+)/', $version, $matches)) {
+            return null;
+        }
+
+        return (int) $matches[1];
     }
 
     private function isToggleEnabled(string $field, bool $default): bool
