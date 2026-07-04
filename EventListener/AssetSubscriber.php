@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.22';
+    private const ASSET_VERSION = '1.0.23';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -50,6 +50,7 @@ class AssetSubscriber implements EventSubscriberInterface
             'locale'                    => $this->getCurrentLocale(),
             'weekStart'                 => $integration->getCalendarWeekStart(),
             'dateFormat'                => $integration->getCalendarDateFormat(),
+            'timeDisplayFormat'         => $integration->getTimeDisplayFormat(),
             'mauticTimezone'            => $this->getMauticTimezone(),
             'campaignDateTimeUtcSubmit' => $campaignDateTimeUtcSubmit,
             'gmailImageProxyOpen'       => $gmailImageProxyOpen,

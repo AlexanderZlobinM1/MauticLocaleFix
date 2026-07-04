@@ -20,6 +20,8 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public const CALENDAR_DATE_FORMAT_FIELD = 'calendar_date_format';
 
+    public const TIME_DISPLAY_FORMAT_FIELD = 'time_display_format';
+
     public const CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD = 'campaign_datetime_utc_submit';
 
     public const GMAIL_IMAGE_PROXY_OPEN_FIELD = 'gmail_image_proxy_open';
@@ -134,6 +136,25 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                 ]
             )
             ->add(
+                self::TIME_DISPLAY_FORMAT_FIELD,
+                ChoiceType::class,
+                [
+                    'label'       => 'mautic.integration.mauticlocalefix.time_display_format',
+                    'required'    => true,
+                    'choices'     => [
+                        'mautic.integration.mauticlocalefix.time_format.native' => 'native',
+                        'mautic.integration.mauticlocalefix.time_format.12h' => '12h',
+                        'mautic.integration.mauticlocalefix.time_format.24h' => '24h',
+                    ],
+                    'data'        => $data[self::TIME_DISPLAY_FORMAT_FIELD] ?? 'native',
+                    'placeholder' => false,
+                    'attr'        => [
+                        'class'   => 'form-control mauticlocalefix-feature-select',
+                        'tooltip' => 'mautic.integration.mauticlocalefix.time_display_format.tooltip',
+                    ],
+                ]
+            )
+            ->add(
                 self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD,
                 YesNoButtonGroupType::class,
                 [
@@ -210,6 +231,13 @@ class MauticLocaleFixIntegration extends AbstractIntegration
     public function isCampaignDateTimeUtcSubmitEnabled(): bool
     {
         return $this->isToggleEnabled(self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD, true);
+    }
+
+    public function getTimeDisplayFormat(): string
+    {
+        $format = (string) ($this->keys[self::TIME_DISPLAY_FORMAT_FIELD] ?? 'native');
+
+        return in_array($format, ['native', '12h', '24h'], true) ? $format : 'native';
     }
 
     public function isGmailImageProxyOpenEnabled(): bool

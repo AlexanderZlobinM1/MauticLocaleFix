@@ -23,6 +23,9 @@ Mautic plugin that adds regional UI settings without patching Mautic core files.
 - Date-only table cells that contain a recognized standalone date are formatted
   according to the configured calendar date format. Mixed text such as campaign
   names is left unchanged.
+- Timestamp/time table columns can keep Mautic's native display or be shown in
+  either 12-hour or 24-hour form. The formatter only changes the visible table
+  text and does not change stored Mautic values.
 - Dashboard date range fields are localized immediately on page load, not only
   after opening the picker. Before submit, those values are temporarily
   normalized back to Mautic's native `M j, Y` format so the backend keeps parsing
@@ -70,15 +73,17 @@ php bin/console cache:clear
 ```
 
 Enable **Mautic Locale Fix** in Mautic integrations, then set **Calendar week
-start**, **Calendar date format**, and optionally **Fix campaign date/time
-timezone submit** and **Count Gmail image proxy opens**.
+start**, **Calendar date format**, **Time display format in tables** (native/no
+change by default), and optionally **Fix campaign date/time timezone submit**
+and **Count Gmail image proxy opens**.
 
 ## Notes
 
 This plugin intentionally does not change global timezone settings or Mautic
 core files. It controls the first day of the week, the calendar popup language,
-selected date-only display formats, and an optional campaign builder workaround
-for Mautic installations where campaign event date/time submit handling parses
-local Mautic time as UTC. The Gmail image proxy workaround is limited to email
-tracking pixel requests and does not disable global bot filtering for page hits,
-assets, prefetch, DNT, or Sec-GPC requests.
+selected date-only display formats, selected timestamp table time formats, and
+an optional campaign builder workaround for Mautic installations where campaign
+event date/time submit handling parses local Mautic time as UTC. The Gmail image
+proxy workaround is limited to email tracking pixel requests and does not
+disable global bot filtering for page hits, assets, prefetch, DNT, or Sec-GPC
+requests.

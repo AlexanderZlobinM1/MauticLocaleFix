@@ -46,6 +46,37 @@ function createTextElement(text, options = {}) {
   };
 }
 
+function createTable(rows) {
+  const rowObjects = rows.map((cells) => {
+    const cellObjects = cells.map((cell) => typeof cell === 'string' ? createTextElement(cell) : cell);
+
+    return {
+      cells: cellObjects,
+      querySelectorAll(selector) {
+        if (selector === 'th,td' || selector === 'td,th') {
+          return cellObjects;
+        }
+
+        return [];
+      },
+    };
+  });
+
+  return {
+    rows: rowObjects,
+    querySelectorAll(selector) {
+      if (selector === 'tr') {
+        return rowObjects;
+      }
+      if (selector === 'th,td' || selector === 'td,th') {
+        return rowObjects.length ? rowObjects[0].cells : [];
+      }
+
+      return [];
+    },
+  };
+}
+
 function runPlugin(config, options = {}) {
   const timeouts = [];
   const submitListeners = [];
@@ -490,6 +521,108 @@ function testCalendarFixFormatsPlainTableDateCells() {
   assert.strictEqual(campaignNameCell.textContent, 'Isporuka 29.07.2026. podsetnik 24h');
 }
 
+function testTimestampColumnsCanUse24HourTime() {
+  const timeCell = createTextElement('Сегодня, 8:46 pm');
+  const typeCell = createTextElement('Контакт обновлен 8:46 pm');
+  const table = createTable([
+    ['Имя пользователя / источник', 'Тип события', 'Отметка времени события'],
+    ['Система', typeCell, timeCell],
+  ]);
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: false,
+    timeDisplayFormat: '24h',
+  }, {
+    querySelectorAll(selector) {
+      if (selector === 'table') {
+        return [table];
+      }
+
+      return [];
+    },
+  });
+
+  assert.strictEqual(timeCell.textContent, 'Сегодня, 20:46');
+  assert.strictEqual(typeCell.textContent, 'Контакт обновлен 8:46 pm');
+}
+
+function testTimestampColumnsCanUse12HourTime() {
+  const timeCell = createTextElement('Today, 20:46');
+  const table = createTable([
+    ['User/source', 'Event type', 'Event timestamp'],
+    ['System', 'Contact updated', timeCell],
+  ]);
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: false,
+    timeDisplayFormat: '12h',
+  }, {
+    querySelectorAll(selector) {
+      if (selector === 'table') {
+        return [table];
+      }
+
+      return [];
+    },
+  });
+
+  assert.strictEqual(timeCell.textContent, 'Today, 8:46 pm');
+}
+
+function testTimeFormattingDoesNotRunWhenPluginIsDisabled() {
+  const timeCell = createTextElement('Сегодня, 8:46 pm');
+  const table = createTable([
+    ['Отметка времени события'],
+    [timeCell],
+  ]);
+
+  runPlugin({
+    enabled: false,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: false,
+    timeDisplayFormat: '24h',
+  }, {
+    querySelectorAll(selector) {
+      if (selector === 'table') {
+        return [table];
+      }
+
+      return [];
+    },
+  });
+
+  assert.strictEqual(timeCell.textContent, 'Сегодня, 8:46 pm');
+}
+
+function testNativeTimeFormattingLeavesTablesUntouched() {
+  const timeCell = createTextElement('Сегодня, 8:46 pm');
+  const table = createTable([
+    ['Отметка времени события'],
+    [timeCell],
+  ]);
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: false,
+    timeDisplayFormat: 'native',
+  }, {
+    querySelectorAll(selector) {
+      if (selector === 'table') {
+        return [table];
+      }
+
+      return [];
+    },
+  });
+
+  assert.strictEqual(timeCell.textContent, 'Сегодня, 8:46 pm');
+}
+
 function testDateRangeInitialValuesAreLocalizedButSubmitStaysNative() {
   const fromInput = createInput('Jun 4, 2026', {
     matches(selector) {
@@ -605,6 +738,10 @@ testActiveDisabledStopsAllFeaturePatches();
 testActiveDisabledRestoresLegacyDatepickerWrapper();
 testCalendarFixRestoresLegacyDatepickerWrapper();
 testCalendarFixFormatsPlainTableDateCells();
+testTimestampColumnsCanUse24HourTime();
+testTimestampColumnsCanUse12HourTime();
+testTimeFormattingDoesNotRunWhenPluginIsDisabled();
+testNativeTimeFormattingLeavesTablesUntouched();
 testDateRangeInitialValuesAreLocalizedButSubmitStaysNative();
 
 console.log('locale-fix tests passed');

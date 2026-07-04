@@ -24,6 +24,12 @@
         dateDisplayFormat = 'locale_medium';
     }
 
+    var timeDisplayFormat = String(config.timeDisplayFormat || 'native').toLowerCase();
+    if (['native', '12h', '24h'].indexOf(timeDisplayFormat) === -1) {
+        timeDisplayFormat = 'native';
+    }
+    var timeDisplayEnabled = pluginEnabled && ['12h', '24h'].indexOf(timeDisplayFormat) !== -1;
+
     var mauticTimezone = String(config.mauticTimezone || '').trim();
 
     var pickerFormatByDisplayFormat = {
@@ -618,6 +624,178 @@
         }
     }
 
+    function isTimeColumnHeaderText(text) {
+        var normalized = String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        if (!normalized) {
+            return false;
+        }
+
+        return normalized.indexOf('timestamp') !== -1 ||
+            normalized.indexOf('time stamp') !== -1 ||
+            normalized.indexOf('date/time') !== -1 ||
+            normalized.indexOf('date time') !== -1 ||
+            normalized.indexOf('event time') !== -1 ||
+            normalized.indexOf('врем') !== -1 ||
+            normalized.indexOf('datum/vreme') !== -1 ||
+            normalized.indexOf('datum vreme') !== -1 ||
+            normalized.indexOf('vrijeme') !== -1 ||
+            normalized.indexOf('vreme') !== -1 ||
+            normalized.indexOf('hora') !== -1 ||
+            normalized.indexOf('heure') !== -1 ||
+            normalized.indexOf('zeit') !== -1 ||
+            normalized.indexOf('czas') !== -1 ||
+            /(^|[^a-z])time([^a-z]|$)/.test(normalized);
+    }
+
+    function elementHasTimeColumnAttribute(element) {
+        var names = ['data-column-name', 'data-column-alias', 'data-field', 'data-sort'];
+        var value;
+        if (!element || !element.getAttribute) {
+            return false;
+        }
+
+        for (var i = 0; i < names.length; i += 1) {
+            value = String(element.getAttribute(names[i]) || '').toLowerCase();
+            if (value && isTimeColumnHeaderText(value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function formatTimeOnlyValue(hour, minute, second, meridiem) {
+        var numericHour = parseInt(hour, 10);
+        var normalizedMeridiem = String(meridiem || '').toLowerCase().replace(/[^apm]/g, '');
+        var suffix;
+        if (isNaN(numericHour)) {
+            return null;
+        }
+
+        if (timeDisplayFormat === '24h') {
+            if (normalizedMeridiem.indexOf('p') === 0 && numericHour < 12) {
+                numericHour += 12;
+            } else if (normalizedMeridiem.indexOf('a') === 0 && numericHour === 12) {
+                numericHour = 0;
+            }
+
+            return pad(numericHour) + ':' + minute + (second ? ':' + second : '');
+        }
+
+        suffix = numericHour >= 12 ? 'pm' : 'am';
+        numericHour %= 12;
+        if (numericHour === 0) {
+            numericHour = 12;
+        }
+
+        return String(numericHour) + ':' + minute + (second ? ':' + second : '') + ' ' + suffix;
+    }
+
+    function formatTimeText(value) {
+        var text = String(value || '');
+        if (!text) {
+            return text;
+        }
+
+        if (timeDisplayFormat === '24h') {
+            return text.replace(/\b(\d{1,2}):([0-5]\d)(?::([0-5]\d))?\s*([AaPp]\.?\s*[Mm]\.?)\b/g, function (match, hour, minute, second, meridiem) {
+                return formatTimeOnlyValue(hour, minute, second, meridiem) || match;
+            });
+        }
+
+        return text.replace(/\b([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b(?!\s*[AaPp]\.?\s*[Mm]\.?)/g, function (match, hour, minute, second) {
+            return formatTimeOnlyValue(hour, minute, second, '') || match;
+        });
+    }
+
+    function formatTimeTextElement(element) {
+        var original;
+        var formatted;
+        if (!timeDisplayEnabled || !element || element.children.length > 0) {
+            return;
+        }
+
+        original = element.textContent || '';
+        if (!original || original.length > 120) {
+            return;
+        }
+
+        formatted = formatTimeText(original);
+        if (formatted && formatted !== original) {
+            element.textContent = formatted;
+        }
+    }
+
+    function getTableTimeColumnIndexes(table) {
+        var rows = queryAll('tr', table);
+        var indexes = [];
+        var headerCells;
+        if (!rows.length) {
+            return indexes;
+        }
+
+        headerCells = queryAll('th,td', rows[0]);
+        Array.prototype.forEach.call(headerCells, function (cell, index) {
+            if (isTimeColumnHeaderText(cell.textContent) || elementHasTimeColumnAttribute(cell)) {
+                indexes.push(index);
+            }
+        });
+
+        return indexes;
+    }
+
+    function formatTimeColumnTables() {
+        var tables = queryAll('table');
+        Array.prototype.forEach.call(tables, function (table) {
+            var indexes = getTableTimeColumnIndexes(table);
+            var rows;
+            if (!indexes.length) {
+                return;
+            }
+
+            rows = queryAll('tr', table);
+            Array.prototype.forEach.call(rows, function (row, rowIndex) {
+                var cells;
+                if (rowIndex === 0) {
+                    return;
+                }
+
+                cells = queryAll('td,th', row);
+                indexes.forEach(function (cellIndex) {
+                    formatTimeTextElement(cells[cellIndex]);
+                });
+            });
+        });
+    }
+
+    function formatTimeAttributedCells() {
+        var cells = queryAll([
+            'td[data-column-name]',
+            'td[data-column-alias]',
+            'td[data-field]',
+            'td[data-sort]',
+            '[role="cell"][data-column-name]',
+            '[role="cell"][data-column-alias]',
+            '[role="cell"][data-field]',
+            '[role="cell"][data-sort]'
+        ].join(','));
+
+        Array.prototype.forEach.call(cells, function (cell) {
+            if (elementHasTimeColumnAttribute(cell)) {
+                formatTimeTextElement(cell);
+            }
+        });
+    }
+
+    function formatPlainTimeTextElements() {
+        if (!timeDisplayEnabled) {
+            return;
+        }
+
+        formatTimeColumnTables();
+        formatTimeAttributedCells();
+    }
+
     function getDateRangeMonthName(date) {
         var locale = String(getConfiguredLocale() || '').replace('_', '-').toLowerCase();
         var language = locale.split('-')[0];
@@ -863,6 +1041,7 @@
 
         Array.prototype.forEach.call(inputs, formatDateInputValue);
         updateDateRangeInputs($);
+        formatPlainTimeTextElements();
         formatPlainDateTextElements([
             'table td',
             'table th',
@@ -1137,6 +1316,7 @@
             'input[name*="calendar_enabled"]',
             'select[name*="calendar_week_start"]',
             'select[name*="calendar_date_format"]',
+            'select[name*="time_display_format"]',
             'input[name*="campaign_datetime_utc_submit"]',
             'input[name*="gmail_image_proxy_open"]'
         ].join(','));
@@ -1213,13 +1393,18 @@
         var $ = getQuery();
         var patched = calendarEnabled ? patchDateTimePicker($) : false;
         var campaignPatched = patchCampaignDateTimeSubmit();
+        var timeFormatted = false;
         if (calendarEnabled) {
             patchMauticDateRangePicker($);
             patchDateRangeSubmit();
             updateExistingPickers($);
         }
+        if (timeDisplayEnabled) {
+            formatPlainTimeTextElements();
+            timeFormatted = true;
+        }
 
-        return patched || campaignPatched;
+        return patched || campaignPatched || timeFormatted;
     }
 
     function installRuntimeLoop() {
@@ -1263,7 +1448,7 @@
     document.addEventListener('change', syncSettingsFormState, true);
     document.addEventListener('mauticPageLoaded', syncSettingsFormState);
 
-    if (!pluginEnabled || (!calendarEnabled && !campaignDateTimeUtcSubmit)) {
+    if (!pluginEnabled || (!calendarEnabled && !campaignDateTimeUtcSubmit && !timeDisplayEnabled)) {
         deactivateRuntime();
         return;
     }
