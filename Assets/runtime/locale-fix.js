@@ -820,76 +820,6 @@
         return formatted || value;
     }
 
-    function cloneChartLabelValue(value) {
-        return Array.isArray(value) ? value.slice() : value;
-    }
-
-    function formatChartLabelValue(value) {
-        if (Array.isArray(value)) {
-            return value.map(formatChartLabelValue);
-        }
-
-        return formatChartTimeValue(value);
-    }
-
-    function chartLabelValuesEqual(left, right) {
-        if (Array.isArray(left) || Array.isArray(right)) {
-            if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
-                return false;
-            }
-
-            for (var i = 0; i < left.length; i += 1) {
-                if (!chartLabelValuesEqual(left[i], right[i])) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        return left === right;
-    }
-
-    function formatChartDataLabels(data) {
-        var sourceLabels;
-        var nextLabels;
-        var changed = false;
-        if (!data || !Array.isArray(data.labels)) {
-            return false;
-        }
-
-        if (!Array.isArray(data.__mauticLocaleFixOriginalLabels)) {
-            data.__mauticLocaleFixOriginalLabels = data.labels.map(cloneChartLabelValue);
-        }
-
-        sourceLabels = data.__mauticLocaleFixOriginalLabels;
-        nextLabels = sourceLabels.map(formatChartLabelValue);
-        for (var i = 0; i < nextLabels.length; i += 1) {
-            if (!chartLabelValuesEqual(data.labels[i], nextLabels[i])) {
-                changed = true;
-                break;
-            }
-        }
-
-        if (changed || data.labels.length !== nextLabels.length) {
-            data.labels = nextLabels;
-            return true;
-        }
-
-        return false;
-    }
-
-    function restoreChartDataLabels(data) {
-        if (!data || !Array.isArray(data.__mauticLocaleFixOriginalLabels)) {
-            return false;
-        }
-
-        data.labels = data.__mauticLocaleFixOriginalLabels.map(cloneChartLabelValue);
-        delete data.__mauticLocaleFixOriginalLabels;
-
-        return true;
-    }
-
     function formatChartCallbackResult(result) {
         if (Array.isArray(result)) {
             return result.map(formatChartCallbackResult);
@@ -925,6 +855,54 @@
         return true;
     }
 
+    function wrapChartTickCallback(ticks, allowFallback) {
+        var original;
+        var wrapped;
+        if (!ticks || typeof ticks !== 'object') {
+            return false;
+        }
+        if (ticks.callback && ticks.callback.__mauticLocaleFixChartTimePatched === true) {
+            return false;
+        }
+
+        original = ticks.callback;
+        if (typeof original !== 'function' && allowFallback !== true) {
+            return false;
+        }
+
+        wrapped = function () {
+            var result = typeof original === 'function' ? original.apply(this, arguments) : arguments[0];
+
+            return formatChartCallbackResult(result);
+        };
+        wrapped.__mauticLocaleFixChartTimePatched = true;
+        wrapped.__mauticLocaleFixChartTimeHadOriginal = typeof original === 'function';
+        wrapped.__mauticLocaleFixChartTimeOriginal = original;
+        ticks.callback = wrapped;
+
+        return true;
+    }
+
+    function restoreChartTickCallback(ticks) {
+        var callback;
+        if (!ticks || typeof ticks !== 'object') {
+            return false;
+        }
+
+        callback = ticks.callback;
+        if (!callback || callback.__mauticLocaleFixChartTimePatched !== true) {
+            return false;
+        }
+
+        if (callback.__mauticLocaleFixChartTimeHadOriginal) {
+            ticks.callback = callback.__mauticLocaleFixChartTimeOriginal;
+        } else {
+            delete ticks.callback;
+        }
+
+        return true;
+    }
+
     function restoreChartCallback(callbacks, name) {
         var callback;
         if (!callbacks || typeof callbacks !== 'object') {
@@ -941,6 +919,17 @@
         return true;
     }
 
+    function isLikelyChartXAxis(axisName, axis, index) {
+        var normalizedName = String(axisName || '').toLowerCase();
+        var id = axis && String(axis.id || axis.axis || '').toLowerCase();
+
+        return normalizedName === 'xaxes' ||
+            normalizedName === 'x' ||
+            id === 'x' ||
+            id.indexOf('x-') === 0 ||
+            index === 0 && normalizedName !== 'yaxes' && normalizedName !== 'y';
+    }
+
     function forEachChartTicks(options, callback) {
         var scales;
         if (!options || !options.scales) {
@@ -955,7 +944,7 @@
 
             scales[axisName].forEach(function (axis) {
                 if (axis && axis.ticks) {
-                    callback(axis.ticks);
+                    callback(axis.ticks, isLikelyChartXAxis(axisName, axis, 0));
                 }
             });
         });
@@ -963,7 +952,7 @@
         Object.keys(scales).forEach(function (key) {
             var scale = scales[key];
             if (scale && !Array.isArray(scale) && scale.ticks) {
-                callback(scale.ticks);
+                callback(scale.ticks, isLikelyChartXAxis(key, scale, 0));
             }
         });
     }
@@ -1006,8 +995,8 @@
             return false;
         }
 
-        forEachChartTicks(options, function (ticks) {
-            changed = wrapChartCallback(ticks, 'callback') || changed;
+        forEachChartTicks(options, function (ticks, isXAxis) {
+            changed = wrapChartTickCallback(ticks, isXAxis) || changed;
         });
         forEachChartTooltipCallbacks(options, function (callbacks, name) {
             changed = wrapChartCallback(callbacks, name) || changed;
@@ -1023,7 +1012,7 @@
         }
 
         forEachChartTicks(options, function (ticks) {
-            changed = restoreChartCallback(ticks, 'callback') || changed;
+            changed = restoreChartTickCallback(ticks) || changed;
         });
         forEachChartTooltipCallbacks(options, function (callbacks, name) {
             changed = restoreChartCallback(callbacks, name) || changed;
@@ -1040,21 +1029,12 @@
         return config.options || (config.config && config.config.options) || null;
     }
 
-    function getChartConfigData(config) {
-        if (!config || typeof config !== 'object') {
-            return null;
-        }
-
-        return config.data || (config.config && config.config.data) || null;
-    }
-
     function applyChartTimeFormattingToConfig(config) {
         var changed = false;
         if (!timeDisplayEnabled || !config || typeof config !== 'object') {
             return false;
         }
 
-        changed = formatChartDataLabels(getChartConfigData(config)) || changed;
         changed = wrapChartTimeCallbacks(getChartConfigOptions(config)) || changed;
 
         return changed;
@@ -1066,7 +1046,6 @@
             return false;
         }
 
-        changed = restoreChartDataLabels(getChartConfigData(config)) || changed;
         changed = restoreChartTimeCallbacks(getChartConfigOptions(config)) || changed;
 
         return changed;
@@ -1137,7 +1116,6 @@
             return false;
         }
 
-        changed = formatChartDataLabels(chart.data) || changed;
         changed = applyChartTimeFormattingToConfig(chart.config) || changed;
         changed = wrapChartTimeCallbacks(chart.options) || changed;
 
@@ -1154,7 +1132,6 @@
             return false;
         }
 
-        changed = restoreChartDataLabels(chart.data) || changed;
         changed = restoreChartTimeFormattingFromConfig(chart.config) || changed;
         changed = restoreChartTimeCallbacks(chart.options) || changed;
 

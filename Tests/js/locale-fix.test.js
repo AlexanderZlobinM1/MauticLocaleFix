@@ -658,7 +658,7 @@ function testNativeTimeFormattingLeavesTablesUntouched() {
   assert.strictEqual(timeCell.textContent, 'Сегодня, 8:46 pm');
 }
 
-function testChartLabelsCanUse24HourTime() {
+function testChartTicksCanUse24HourTime() {
   const Chart = createChartConstructor();
   const env = runPlugin({
     enabled: true,
@@ -693,13 +693,13 @@ function testChartLabelsCanUse24HourTime() {
   const chart = new env.window.Chart(null, config);
   env.flushIntervals();
 
-  assert.deepStrictEqual(chart.data.labels, ['00:00', '04:00', '12:00', '20:00']);
+  assert.deepStrictEqual(chart.data.labels, ['12:00 am', '4:00 am', '12:00 pm', '8:00 pm']);
   assert.strictEqual(config.options.scales.xAxes[0].ticks.callback('8:00 pm'), '20:00');
   assert.strictEqual(config.options.tooltips.callbacks.title(), '16:00');
   assert.strictEqual(env.window.Chart, Chart);
 }
 
-function testChartLabelsCanUse12HourTime() {
+function testChartTicksCanUse12HourTime() {
   const Chart = createChartConstructor();
   const env = runPlugin({
     enabled: true,
@@ -727,17 +727,21 @@ function testChartLabelsCanUse12HourTime() {
   const chart = new env.window.Chart(null, config);
   env.flushIntervals();
 
-  assert.deepStrictEqual(chart.data.labels, ['12:00 am', '4:00 am', '12:00 pm', '8:00 pm']);
+  assert.deepStrictEqual(chart.data.labels, ['00:00', '04:00', '12:00', '20:00']);
   assert.strictEqual(config.options.scales.x.ticks.callback('16:00'), '4:00 pm');
 }
 
-function testExistingChartLabelsAreFormatted() {
+function testExistingChartTicksAreFormattedWithoutMutatingLabels() {
   const Chart = createChartConstructor();
   const config = {
     data: {
       labels: ['12:00 am', '8:00 pm'],
     },
-    options: {},
+    options: {
+      scales: {
+        xAxes: [{ticks: {}}],
+      },
+    },
   };
   const chart = new Chart(null, config);
 
@@ -748,7 +752,8 @@ function testExistingChartLabelsAreFormatted() {
     timeDisplayFormat: '24h',
   }, {Chart});
 
-  assert.deepStrictEqual(chart.data.labels, ['00:00', '20:00']);
+  assert.deepStrictEqual(chart.data.labels, ['12:00 am', '8:00 pm']);
+  assert.strictEqual(config.options.scales.xAxes[0].ticks.callback('8:00 pm'), '20:00');
   assert.ok(chart.updateCalls.length > 0);
 }
 
@@ -890,9 +895,9 @@ testTimestampColumnsCanUse24HourTime();
 testTimestampColumnsCanUse12HourTime();
 testTimeFormattingDoesNotRunWhenPluginIsDisabled();
 testNativeTimeFormattingLeavesTablesUntouched();
-testChartLabelsCanUse24HourTime();
-testChartLabelsCanUse12HourTime();
-testExistingChartLabelsAreFormatted();
+testChartTicksCanUse24HourTime();
+testChartTicksCanUse12HourTime();
+testExistingChartTicksAreFormattedWithoutMutatingLabels();
 testNativeTimeFormattingLeavesChartsUntouched();
 testDateRangeInitialValuesAreLocalizedButSubmitStaysNative();
 
