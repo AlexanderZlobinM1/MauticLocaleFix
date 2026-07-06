@@ -602,6 +602,31 @@ function testTimestampColumnsCanUse24HourTime() {
   assert.strictEqual(typeCell.textContent, 'Контакт обновлен 8:46 pm');
 }
 
+function testLastLoginColumnsCanUse24HourTime() {
+  const timeCell = createTextElement('Сегодня, 11:45 am');
+  const table = createTable([
+    ['Имя', 'Имя пользователя', 'email', 'Роль', 'Последний вход', 'ID'],
+    ['Zlobin, Alexander', 'zlobin', 'alexander.zlobin@m1.rs', 'Administrator', timeCell, '1'],
+  ]);
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: false,
+    timeDisplayFormat: '24h',
+  }, {
+    querySelectorAll(selector) {
+      if (selector === 'table') {
+        return [table];
+      }
+
+      return [];
+    },
+  });
+
+  assert.strictEqual(timeCell.textContent, 'Сегодня, 11:45');
+}
+
 function testTimestampColumnsCanUse12HourTime() {
   const timeCell = createTextElement('Today, 20:46');
   const table = createTable([
@@ -937,6 +962,7 @@ testActiveDisabledRestoresLegacyDatepickerWrapper();
 testCalendarFixRestoresLegacyDatepickerWrapper();
 testCalendarFixFormatsPlainTableDateCells();
 testTimestampColumnsCanUse24HourTime();
+testLastLoginColumnsCanUse24HourTime();
 testTimestampColumnsCanUse12HourTime();
 testTimeFormattingDoesNotRunWhenPluginIsDisabled();
 testNativeTimeFormattingLeavesTablesUntouched();

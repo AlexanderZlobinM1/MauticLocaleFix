@@ -635,11 +635,19 @@
             normalized.indexOf('date/time') !== -1 ||
             normalized.indexOf('date time') !== -1 ||
             normalized.indexOf('event time') !== -1 ||
+            normalized.indexOf('last login') !== -1 ||
+            normalized.indexOf('last logged') !== -1 ||
+            normalized.indexOf('last active') !== -1 ||
+            normalized.indexOf('last seen') !== -1 ||
             normalized.indexOf('врем') !== -1 ||
+            normalized.indexOf('последний вход') !== -1 ||
+            normalized.indexOf('последняя актив') !== -1 ||
             normalized.indexOf('datum/vreme') !== -1 ||
             normalized.indexOf('datum vreme') !== -1 ||
             normalized.indexOf('vrijeme') !== -1 ||
             normalized.indexOf('vreme') !== -1 ||
+            normalized.indexOf('poslednja prijava') !== -1 ||
+            normalized.indexOf('zadnja prijava') !== -1 ||
             normalized.indexOf('hora') !== -1 ||
             normalized.indexOf('heure') !== -1 ||
             normalized.indexOf('zeit') !== -1 ||
