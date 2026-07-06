@@ -900,7 +900,6 @@
 
     function wrapChartCallback(callbacks, name) {
         var original;
-        var hadOriginal;
         var wrapped;
         if (!callbacks || typeof callbacks !== 'object') {
             return false;
@@ -910,14 +909,16 @@
         }
 
         original = callbacks[name];
-        hadOriginal = typeof original === 'function';
+        if (typeof original !== 'function') {
+            return false;
+        }
+
         wrapped = function () {
-            var result = hadOriginal ? original.apply(this, arguments) : arguments[0];
+            var result = original.apply(this, arguments);
 
             return formatChartCallbackResult(result);
         };
         wrapped.__mauticLocaleFixChartTimePatched = true;
-        wrapped.__mauticLocaleFixChartTimeHadOriginal = hadOriginal;
         wrapped.__mauticLocaleFixChartTimeOriginal = original;
         callbacks[name] = wrapped;
 
@@ -935,11 +936,7 @@
             return false;
         }
 
-        if (callback.__mauticLocaleFixChartTimeHadOriginal) {
-            callbacks[name] = callback.__mauticLocaleFixChartTimeOriginal;
-        } else {
-            delete callbacks[name];
-        }
+        callbacks[name] = callback.__mauticLocaleFixChartTimeOriginal;
 
         return true;
     }
@@ -1168,56 +1165,22 @@
         return changed;
     }
 
-    function copyChartConstructorProperties(target, source) {
-        Object.getOwnPropertyNames(source).forEach(function (name) {
-            if (['prototype', 'name', 'length', 'caller', 'arguments'].indexOf(name) !== -1) {
-                return;
-            }
-
-            try {
-                Object.defineProperty(target, name, Object.getOwnPropertyDescriptor(source, name));
-            } catch (e) {
-            }
-        });
-    }
-
     function patchChartTimeFormatting() {
-        var ChartConstructor = window.Chart;
-        var PatchedChart;
-        var existingChanged = false;
-        if (!timeDisplayEnabled || typeof ChartConstructor !== 'function') {
+        var chartInstances;
+        var changed = false;
+        if (!timeDisplayEnabled || typeof window.Chart !== 'function') {
             return false;
         }
 
-        if (ChartConstructor.__mauticLocaleFixChartPatched === true) {
-            getChartInstances().forEach(function (chart) {
-                existingChanged = applyChartTimeFormattingToInstance(chart) || existingChanged;
-            });
-            runtime.chartTimeFormattingPatched = true;
+        restoreChartWrapper();
+        chartInstances = getChartInstances();
 
-            return true;
-        }
-
-        PatchedChart = function (context, config) {
-            var chart;
-            applyChartTimeFormattingToConfig(config);
-            chart = new ChartConstructor(context, config);
-            applyChartTimeFormattingToInstance(chart);
-
-            return chart;
-        };
-        copyChartConstructorProperties(PatchedChart, ChartConstructor);
-        PatchedChart.prototype = ChartConstructor.prototype;
-        PatchedChart.__mauticLocaleFixChartPatched = true;
-        PatchedChart.__mauticLocaleFixChartOriginal = ChartConstructor;
-        window.Chart = PatchedChart;
-        runtime.chartTimeFormattingPatched = true;
-
-        getChartInstances().forEach(function (chart) {
-            existingChanged = applyChartTimeFormattingToInstance(chart) || existingChanged;
+        chartInstances.forEach(function (chart) {
+            changed = applyChartTimeFormattingToInstance(chart) || changed;
         });
+        runtime.chartTimeFormattingPatched = chartInstances.length > 0;
 
-        return true;
+        return runtime.chartTimeFormattingPatched || changed;
     }
 
     function restoreChartWrapper() {

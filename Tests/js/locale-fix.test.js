@@ -131,11 +131,16 @@ function runPlugin(config, options = {}) {
       return timeouts.length;
     },
     setInterval(callback) {
-      intervals.push(callback);
+      const interval = {callback, active: true};
+      intervals.push(interval);
       callback();
-      return intervals.length;
+      return interval;
     },
-    clearInterval() {},
+    clearInterval(interval) {
+      if (interval) {
+        interval.active = false;
+      }
+    },
     mQuery: options.query,
     Chart: options.Chart,
   };
@@ -164,6 +169,13 @@ function runPlugin(config, options = {}) {
       while (timeouts.length > 0) {
         timeouts.shift()();
       }
+    },
+    flushIntervals() {
+      intervals.forEach((interval) => {
+        if (interval.active) {
+          interval.callback();
+        }
+      });
     },
   };
 }
@@ -660,7 +672,13 @@ function testChartLabelsCanUse24HourTime() {
     },
     options: {
       scales: {
-        xAxes: [{ticks: {}}],
+        xAxes: [{
+          ticks: {
+            callback(value) {
+              return value;
+            },
+          },
+        }],
       },
       tooltips: {
         callbacks: {
@@ -673,12 +691,12 @@ function testChartLabelsCanUse24HourTime() {
   };
 
   const chart = new env.window.Chart(null, config);
+  env.flushIntervals();
 
   assert.deepStrictEqual(chart.data.labels, ['00:00', '04:00', '12:00', '20:00']);
   assert.strictEqual(config.options.scales.xAxes[0].ticks.callback('8:00 pm'), '20:00');
   assert.strictEqual(config.options.tooltips.callbacks.title(), '16:00');
-  assert.notStrictEqual(env.window.Chart, Chart);
-  assert.strictEqual(env.window.Chart.__mauticLocaleFixChartOriginal, Chart);
+  assert.strictEqual(env.window.Chart, Chart);
 }
 
 function testChartLabelsCanUse12HourTime() {
@@ -695,12 +713,19 @@ function testChartLabelsCanUse12HourTime() {
     },
     options: {
       scales: {
-        x: {ticks: {}},
+        x: {
+          ticks: {
+            callback(value) {
+              return value;
+            },
+          },
+        },
       },
     },
   };
 
   const chart = new env.window.Chart(null, config);
+  env.flushIntervals();
 
   assert.deepStrictEqual(chart.data.labels, ['12:00 am', '4:00 am', '12:00 pm', '8:00 pm']);
   assert.strictEqual(config.options.scales.x.ticks.callback('16:00'), '4:00 pm');
