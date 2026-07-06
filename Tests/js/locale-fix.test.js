@@ -109,7 +109,14 @@ function runPlugin(config, options = {}) {
     },
     querySelectorAll(selector) {
       if (typeof options.querySelectorAll === 'function') {
-        return options.querySelectorAll(selector);
+        const matches = options.querySelectorAll(selector);
+        if (matches) {
+          return matches;
+        }
+      }
+
+      if (selector === 'input[name="campaignevent[triggerDate]"]') {
+        return [input];
       }
 
       return [];
@@ -244,18 +251,24 @@ function testDisabledConfigDoesNothing() {
 
 function testCampaignSubmitConvertsLocalMauticTimeToUtc() {
   const seen = [];
+  const input = createInput('2026-06-29 13:00');
   const env = runPlugin({
     enabled: true,
     calendarEnabled: false,
     campaignDateTimeUtcSubmit: true,
     mauticTimezone: 'Europe/Belgrade',
   }, {
+    input,
     mautic: {
       submitCampaignEvent() {
         seen.push(env.input.value);
       },
     },
   });
+
+  assert.strictEqual(env.input.value, '2026-06-29 15:00');
+  assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-local-display'), '1');
+  assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-original-utc'), '2026-06-29 13:00');
 
   env.window.Mautic.submitCampaignEvent();
   assert.deepStrictEqual(seen, ['2026-06-29 13:00:00']);
@@ -268,6 +281,51 @@ function testCampaignSubmitConvertsLocalMauticTimeToUtc() {
   env.flushTimeouts();
   assert.strictEqual(env.input.value, '2026-06-29 15:00');
   assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-utc-submit'), null);
+}
+
+function testCampaignTriggerDateDisplayLocalizesStoredUtcOnce() {
+  const input = createInput('2026-07-07 07:00');
+  const env = runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: true,
+    mauticTimezone: 'Europe/Belgrade',
+  }, {
+    input,
+    mautic: {
+      submitCampaignEvent() {},
+    },
+  });
+
+  assert.strictEqual(env.input.value, '2026-07-07 09:00');
+  env.flushIntervals();
+  assert.strictEqual(env.input.value, '2026-07-07 09:00');
+}
+
+function testBlankCampaignTriggerDateKeepsUserLocalInput() {
+  const seen = [];
+  const input = createInput('');
+  const env = runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: true,
+    mauticTimezone: 'Europe/Belgrade',
+  }, {
+    input,
+    mautic: {
+      submitCampaignEvent() {
+        seen.push(env.input.value);
+      },
+    },
+  });
+
+  assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-local-display'), '1');
+  env.input.value = '2026-07-07 09:00';
+  env.flushIntervals();
+  assert.strictEqual(env.input.value, '2026-07-07 09:00');
+
+  env.window.Mautic.submitCampaignEvent();
+  assert.deepStrictEqual(seen, ['2026-07-07 07:00:00']);
 }
 
 function testCampaignSubmitDoesNotPatchDatepickerWhenCalendarFixIsOff() {
@@ -952,6 +1010,8 @@ function testDateRangeInitialValuesAreLocalizedButSubmitStaysNative() {
 
 testDisabledConfigDoesNothing();
 testCampaignSubmitConvertsLocalMauticTimeToUtc();
+testCampaignTriggerDateDisplayLocalizesStoredUtcOnce();
+testBlankCampaignTriggerDateKeepsUserLocalInput();
 testCampaignSubmitDoesNotPatchDatepickerWhenCalendarFixIsOff();
 testThirdPartyDatePickerKeepsItsOptionsUntouched();
 testCalendarFixSetsDefaultWeekStartWithoutWrappingDatepicker();

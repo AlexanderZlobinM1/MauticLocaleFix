@@ -414,7 +414,8 @@
             day: parseInt(match[3], 10),
             hour: parseInt(match[4], 10),
             minute: parseInt(match[5], 10),
-            second: parseInt(match[6] || '0', 10)
+            second: parseInt(match[6] || '0', 10),
+            hasSeconds: match[6] !== undefined
         };
     }
 
@@ -486,6 +487,86 @@
             pad(date.getUTCMinutes()),
             pad(date.getUTCSeconds())
         ].join(':');
+    }
+
+    function formatMauticDateTimeParts(parts, includeSeconds) {
+        var time = [
+            pad(parts.hour || 0),
+            pad(parts.minute || 0)
+        ];
+
+        if (includeSeconds) {
+            time.push(pad(parts.second || 0));
+        }
+
+        return [
+            parts.year,
+            pad(parts.month),
+            pad(parts.day)
+        ].join('-') + ' ' + time.join(':');
+    }
+
+    function localizeCampaignTriggerDateInput(input) {
+        if (!campaignDateTimeUtcSubmit || !input || !mauticTimezone) {
+            return false;
+        }
+        if (input.getAttribute('data-mautic-locale-fix-local-display') === '1') {
+            return false;
+        }
+
+        var original = String(input.value || '').trim();
+        if (!original) {
+            input.setAttribute('data-mautic-locale-fix-local-display', '1');
+
+            return false;
+        }
+
+        var parts = parseMauticDateTimeText(original);
+        if (!parts) {
+            input.setAttribute('data-mautic-locale-fix-local-display', '1');
+
+            return false;
+        }
+
+        var localParts = getTimeZoneDateParts(new Date(Date.UTC(
+            parts.year,
+            parts.month - 1,
+            parts.day,
+            parts.hour,
+            parts.minute,
+            parts.second
+        )), mauticTimezone);
+        if (!localParts || !localParts.year || !localParts.month || !localParts.day || isNaN(localParts.hour)) {
+            input.setAttribute('data-mautic-locale-fix-local-display', '1');
+
+            return false;
+        }
+
+        var localized = formatMauticDateTimeParts(localParts, parts.hasSeconds);
+        input.setAttribute('data-mautic-locale-fix-local-display', '1');
+        input.setAttribute('data-mautic-locale-fix-original-utc', original);
+
+        if (localized === original) {
+            return false;
+        }
+
+        input.value = localized;
+
+        return true;
+    }
+
+    function localizeCampaignTriggerDateInputs() {
+        if (!campaignDateTimeUtcSubmit || !mauticTimezone) {
+            return false;
+        }
+
+        var localized = false;
+        var inputs = getQueryCollection('input[name="campaignevent[triggerDate]"]');
+        Array.prototype.forEach.call(inputs, function (input) {
+            localized = localizeCampaignTriggerDateInput(input) || localized;
+        });
+
+        return localized;
     }
 
     function normalizeCampaignTriggerDateInput(input) {
@@ -1865,6 +1946,7 @@
     function applyPatch() {
         var $ = getQuery();
         var patched = calendarEnabled ? patchDateTimePicker($) : false;
+        localizeCampaignTriggerDateInputs();
         var campaignPatched = patchCampaignDateTimeSubmit();
         var chartPatched = false;
         var timeFormatted = false;

@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.30';
+    private const ASSET_VERSION = '1.0.31';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
