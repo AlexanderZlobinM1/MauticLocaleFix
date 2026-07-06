@@ -3,7 +3,7 @@
 return [
     'name'        => 'Mautic Locale Fix',
     'description' => 'Regional UI settings for Mautic without core patches.',
-    'version'     => '1.0.29',
+    'version'     => '1.0.30',
     'author'      => 'Sales Snap',
     'services'    => [
         'events' => [
