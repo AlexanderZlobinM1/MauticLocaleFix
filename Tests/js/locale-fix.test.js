@@ -137,6 +137,7 @@ function runPlugin(config, options = {}) {
     },
     clearInterval() {},
     mQuery: options.query,
+    Chart: options.Chart,
   };
 
   const context = {
@@ -165,6 +166,28 @@ function runPlugin(config, options = {}) {
       }
     },
   };
+}
+
+function createChartConstructor() {
+  function Chart(context, config) {
+    this.context = context;
+    this.config = config || {};
+    this.data = this.config.data || {};
+    this.options = this.config.options || {};
+    this.updateCalls = [];
+    Chart.instances.push(this);
+
+    return this;
+  }
+
+  Chart.instances = [];
+  Chart.defaults = {};
+  Chart.version = '2.9.4-test';
+  Chart.prototype.update = function update(mode) {
+    this.updateCalls.push(mode);
+  };
+
+  return Chart;
 }
 
 function testDisabledConfigDoesNothing() {
@@ -623,6 +646,106 @@ function testNativeTimeFormattingLeavesTablesUntouched() {
   assert.strictEqual(timeCell.textContent, 'Сегодня, 8:46 pm');
 }
 
+function testChartLabelsCanUse24HourTime() {
+  const Chart = createChartConstructor();
+  const env = runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: false,
+    timeDisplayFormat: '24h',
+  }, {Chart});
+  const config = {
+    data: {
+      labels: ['12:00 am', '4:00 am', '12:00 pm', '8:00 pm'],
+    },
+    options: {
+      scales: {
+        xAxes: [{ticks: {}}],
+      },
+      tooltips: {
+        callbacks: {
+          title() {
+            return '4:00 pm';
+          },
+        },
+      },
+    },
+  };
+
+  const chart = new env.window.Chart(null, config);
+
+  assert.deepStrictEqual(chart.data.labels, ['00:00', '04:00', '12:00', '20:00']);
+  assert.strictEqual(config.options.scales.xAxes[0].ticks.callback('8:00 pm'), '20:00');
+  assert.strictEqual(config.options.tooltips.callbacks.title(), '16:00');
+  assert.notStrictEqual(env.window.Chart, Chart);
+  assert.strictEqual(env.window.Chart.__mauticLocaleFixChartOriginal, Chart);
+}
+
+function testChartLabelsCanUse12HourTime() {
+  const Chart = createChartConstructor();
+  const env = runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: false,
+    timeDisplayFormat: '12h',
+  }, {Chart});
+  const config = {
+    data: {
+      labels: ['00:00', '04:00', '12:00', '20:00'],
+    },
+    options: {
+      scales: {
+        x: {ticks: {}},
+      },
+    },
+  };
+
+  const chart = new env.window.Chart(null, config);
+
+  assert.deepStrictEqual(chart.data.labels, ['12:00 am', '4:00 am', '12:00 pm', '8:00 pm']);
+  assert.strictEqual(config.options.scales.x.ticks.callback('16:00'), '4:00 pm');
+}
+
+function testExistingChartLabelsAreFormatted() {
+  const Chart = createChartConstructor();
+  const config = {
+    data: {
+      labels: ['12:00 am', '8:00 pm'],
+    },
+    options: {},
+  };
+  const chart = new Chart(null, config);
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: false,
+    timeDisplayFormat: '24h',
+  }, {Chart});
+
+  assert.deepStrictEqual(chart.data.labels, ['00:00', '20:00']);
+  assert.ok(chart.updateCalls.length > 0);
+}
+
+function testNativeTimeFormattingLeavesChartsUntouched() {
+  const Chart = createChartConstructor();
+  const env = runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: false,
+    timeDisplayFormat: 'native',
+  }, {Chart});
+  const config = {
+    data: {
+      labels: ['12:00 am', '8:00 pm'],
+    },
+  };
+  const chart = new env.window.Chart(null, config);
+
+  assert.strictEqual(env.window.Chart, Chart);
+  assert.deepStrictEqual(chart.data.labels, ['12:00 am', '8:00 pm']);
+}
+
 function testDateRangeInitialValuesAreLocalizedButSubmitStaysNative() {
   const fromInput = createInput('Jun 4, 2026', {
     matches(selector) {
@@ -742,6 +865,10 @@ testTimestampColumnsCanUse24HourTime();
 testTimestampColumnsCanUse12HourTime();
 testTimeFormattingDoesNotRunWhenPluginIsDisabled();
 testNativeTimeFormattingLeavesTablesUntouched();
+testChartLabelsCanUse24HourTime();
+testChartLabelsCanUse12HourTime();
+testExistingChartLabelsAreFormatted();
+testNativeTimeFormattingLeavesChartsUntouched();
 testDateRangeInitialValuesAreLocalizedButSubmitStaysNative();
 
 console.log('locale-fix tests passed');

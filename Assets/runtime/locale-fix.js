@@ -712,18 +712,22 @@
         var original;
         var formatted;
         if (!timeDisplayEnabled || !element || element.children.length > 0) {
-            return;
+            return false;
         }
 
         original = element.textContent || '';
         if (!original || original.length > 120) {
-            return;
+            return false;
         }
 
         formatted = formatTimeText(original);
         if (formatted && formatted !== original) {
             element.textContent = formatted;
+
+            return true;
         }
+
+        return false;
     }
 
     function getTableTimeColumnIndexes(table) {
@@ -746,6 +750,7 @@
 
     function formatTimeColumnTables() {
         var tables = queryAll('table');
+        var changed = false;
         Array.prototype.forEach.call(tables, function (table) {
             var indexes = getTableTimeColumnIndexes(table);
             var rows;
@@ -762,10 +767,12 @@
 
                 cells = queryAll('td,th', row);
                 indexes.forEach(function (cellIndex) {
-                    formatTimeTextElement(cells[cellIndex]);
+                    changed = formatTimeTextElement(cells[cellIndex]) || changed;
                 });
             });
         });
+
+        return changed;
     }
 
     function formatTimeAttributedCells() {
@@ -779,21 +786,451 @@
             '[role="cell"][data-field]',
             '[role="cell"][data-sort]'
         ].join(','));
+        var changed = false;
 
         Array.prototype.forEach.call(cells, function (cell) {
             if (elementHasTimeColumnAttribute(cell)) {
-                formatTimeTextElement(cell);
+                changed = formatTimeTextElement(cell) || changed;
+            }
+        });
+
+        return changed;
+    }
+
+    function formatPlainTimeTextElements() {
+        var changed = false;
+        if (!timeDisplayEnabled) {
+            return false;
+        }
+
+        changed = formatTimeColumnTables() || changed;
+        changed = formatTimeAttributedCells() || changed;
+
+        return changed;
+    }
+
+    function formatChartTimeValue(value) {
+        var formatted;
+        if (!timeDisplayEnabled || typeof value !== 'string') {
+            return value;
+        }
+
+        formatted = formatTimeText(value);
+
+        return formatted || value;
+    }
+
+    function cloneChartLabelValue(value) {
+        return Array.isArray(value) ? value.slice() : value;
+    }
+
+    function formatChartLabelValue(value) {
+        if (Array.isArray(value)) {
+            return value.map(formatChartLabelValue);
+        }
+
+        return formatChartTimeValue(value);
+    }
+
+    function chartLabelValuesEqual(left, right) {
+        if (Array.isArray(left) || Array.isArray(right)) {
+            if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+                return false;
+            }
+
+            for (var i = 0; i < left.length; i += 1) {
+                if (!chartLabelValuesEqual(left[i], right[i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return left === right;
+    }
+
+    function formatChartDataLabels(data) {
+        var sourceLabels;
+        var nextLabels;
+        var changed = false;
+        if (!data || !Array.isArray(data.labels)) {
+            return false;
+        }
+
+        if (!Array.isArray(data.__mauticLocaleFixOriginalLabels)) {
+            data.__mauticLocaleFixOriginalLabels = data.labels.map(cloneChartLabelValue);
+        }
+
+        sourceLabels = data.__mauticLocaleFixOriginalLabels;
+        nextLabels = sourceLabels.map(formatChartLabelValue);
+        for (var i = 0; i < nextLabels.length; i += 1) {
+            if (!chartLabelValuesEqual(data.labels[i], nextLabels[i])) {
+                changed = true;
+                break;
+            }
+        }
+
+        if (changed || data.labels.length !== nextLabels.length) {
+            data.labels = nextLabels;
+            return true;
+        }
+
+        return false;
+    }
+
+    function restoreChartDataLabels(data) {
+        if (!data || !Array.isArray(data.__mauticLocaleFixOriginalLabels)) {
+            return false;
+        }
+
+        data.labels = data.__mauticLocaleFixOriginalLabels.map(cloneChartLabelValue);
+        delete data.__mauticLocaleFixOriginalLabels;
+
+        return true;
+    }
+
+    function formatChartCallbackResult(result) {
+        if (Array.isArray(result)) {
+            return result.map(formatChartCallbackResult);
+        }
+
+        return formatChartTimeValue(result);
+    }
+
+    function wrapChartCallback(callbacks, name) {
+        var original;
+        var hadOriginal;
+        var wrapped;
+        if (!callbacks || typeof callbacks !== 'object') {
+            return false;
+        }
+        if (callbacks[name] && callbacks[name].__mauticLocaleFixChartTimePatched === true) {
+            return false;
+        }
+
+        original = callbacks[name];
+        hadOriginal = typeof original === 'function';
+        wrapped = function () {
+            var result = hadOriginal ? original.apply(this, arguments) : arguments[0];
+
+            return formatChartCallbackResult(result);
+        };
+        wrapped.__mauticLocaleFixChartTimePatched = true;
+        wrapped.__mauticLocaleFixChartTimeHadOriginal = hadOriginal;
+        wrapped.__mauticLocaleFixChartTimeOriginal = original;
+        callbacks[name] = wrapped;
+
+        return true;
+    }
+
+    function restoreChartCallback(callbacks, name) {
+        var callback;
+        if (!callbacks || typeof callbacks !== 'object') {
+            return false;
+        }
+
+        callback = callbacks[name];
+        if (!callback || callback.__mauticLocaleFixChartTimePatched !== true) {
+            return false;
+        }
+
+        if (callback.__mauticLocaleFixChartTimeHadOriginal) {
+            callbacks[name] = callback.__mauticLocaleFixChartTimeOriginal;
+        } else {
+            delete callbacks[name];
+        }
+
+        return true;
+    }
+
+    function forEachChartTicks(options, callback) {
+        var scales;
+        if (!options || !options.scales) {
+            return;
+        }
+
+        scales = options.scales;
+        ['xAxes', 'yAxes'].forEach(function (axisName) {
+            if (!Array.isArray(scales[axisName])) {
+                return;
+            }
+
+            scales[axisName].forEach(function (axis) {
+                if (axis && axis.ticks) {
+                    callback(axis.ticks);
+                }
+            });
+        });
+
+        Object.keys(scales).forEach(function (key) {
+            var scale = scales[key];
+            if (scale && !Array.isArray(scale) && scale.ticks) {
+                callback(scale.ticks);
             }
         });
     }
 
-    function formatPlainTimeTextElements() {
-        if (!timeDisplayEnabled) {
+    function forEachChartTooltipCallbacks(options, callback) {
+        var callbackNames = [
+            'beforeTitle',
+            'title',
+            'afterTitle',
+            'beforeLabel',
+            'label',
+            'afterLabel',
+            'beforeFooter',
+            'footer',
+            'afterFooter'
+        ];
+        var containers = [];
+
+        if (!options) {
             return;
         }
 
-        formatTimeColumnTables();
-        formatTimeAttributedCells();
+        if (options.tooltips && options.tooltips.callbacks) {
+            containers.push(options.tooltips.callbacks);
+        }
+        if (options.plugins && options.plugins.tooltip && options.plugins.tooltip.callbacks) {
+            containers.push(options.plugins.tooltip.callbacks);
+        }
+
+        containers.forEach(function (callbacks) {
+            callbackNames.forEach(function (name) {
+                callback(callbacks, name);
+            });
+        });
+    }
+
+    function wrapChartTimeCallbacks(options) {
+        var changed = false;
+        if (!options) {
+            return false;
+        }
+
+        forEachChartTicks(options, function (ticks) {
+            changed = wrapChartCallback(ticks, 'callback') || changed;
+        });
+        forEachChartTooltipCallbacks(options, function (callbacks, name) {
+            changed = wrapChartCallback(callbacks, name) || changed;
+        });
+
+        return changed;
+    }
+
+    function restoreChartTimeCallbacks(options) {
+        var changed = false;
+        if (!options) {
+            return false;
+        }
+
+        forEachChartTicks(options, function (ticks) {
+            changed = restoreChartCallback(ticks, 'callback') || changed;
+        });
+        forEachChartTooltipCallbacks(options, function (callbacks, name) {
+            changed = restoreChartCallback(callbacks, name) || changed;
+        });
+
+        return changed;
+    }
+
+    function getChartConfigOptions(config) {
+        if (!config || typeof config !== 'object') {
+            return null;
+        }
+
+        return config.options || (config.config && config.config.options) || null;
+    }
+
+    function getChartConfigData(config) {
+        if (!config || typeof config !== 'object') {
+            return null;
+        }
+
+        return config.data || (config.config && config.config.data) || null;
+    }
+
+    function applyChartTimeFormattingToConfig(config) {
+        var changed = false;
+        if (!timeDisplayEnabled || !config || typeof config !== 'object') {
+            return false;
+        }
+
+        changed = formatChartDataLabels(getChartConfigData(config)) || changed;
+        changed = wrapChartTimeCallbacks(getChartConfigOptions(config)) || changed;
+
+        return changed;
+    }
+
+    function restoreChartTimeFormattingFromConfig(config) {
+        var changed = false;
+        if (!config || typeof config !== 'object') {
+            return false;
+        }
+
+        changed = restoreChartDataLabels(getChartConfigData(config)) || changed;
+        changed = restoreChartTimeCallbacks(getChartConfigOptions(config)) || changed;
+
+        return changed;
+    }
+
+    function updateChartInstance(chart) {
+        if (!chart || typeof chart.update !== 'function') {
+            return;
+        }
+
+        try {
+            chart.update('none');
+            return;
+        } catch (e) {
+        }
+
+        try {
+            chart.update(0);
+        } catch (e) {
+        }
+    }
+
+    function getChartConstructor() {
+        return window.Chart && window.Chart.__mauticLocaleFixChartOriginal ?
+            window.Chart.__mauticLocaleFixChartOriginal :
+            window.Chart;
+    }
+
+    function getChartInstances() {
+        var ChartConstructor = getChartConstructor();
+        var instances = [];
+        var seen = [];
+
+        function pushInstance(instance) {
+            if (!instance || seen.indexOf(instance) !== -1) {
+                return;
+            }
+
+            seen.push(instance);
+            instances.push(instance);
+        }
+
+        if (ChartConstructor && ChartConstructor.instances) {
+            if (Array.isArray(ChartConstructor.instances)) {
+                ChartConstructor.instances.forEach(pushInstance);
+            } else {
+                Object.keys(ChartConstructor.instances).forEach(function (key) {
+                    pushInstance(ChartConstructor.instances[key]);
+                });
+            }
+        }
+
+        if (ChartConstructor && typeof ChartConstructor.getChart === 'function') {
+            Array.prototype.forEach.call(queryAll('canvas'), function (canvas) {
+                try {
+                    pushInstance(ChartConstructor.getChart(canvas));
+                } catch (e) {
+                }
+            });
+        }
+
+        return instances;
+    }
+
+    function applyChartTimeFormattingToInstance(chart) {
+        var changed = false;
+        if (!chart) {
+            return false;
+        }
+
+        changed = formatChartDataLabels(chart.data) || changed;
+        changed = applyChartTimeFormattingToConfig(chart.config) || changed;
+        changed = wrapChartTimeCallbacks(chart.options) || changed;
+
+        if (changed) {
+            updateChartInstance(chart);
+        }
+
+        return changed;
+    }
+
+    function restoreChartTimeFormattingFromInstance(chart) {
+        var changed = false;
+        if (!chart) {
+            return false;
+        }
+
+        changed = restoreChartDataLabels(chart.data) || changed;
+        changed = restoreChartTimeFormattingFromConfig(chart.config) || changed;
+        changed = restoreChartTimeCallbacks(chart.options) || changed;
+
+        if (changed) {
+            updateChartInstance(chart);
+        }
+
+        return changed;
+    }
+
+    function copyChartConstructorProperties(target, source) {
+        Object.getOwnPropertyNames(source).forEach(function (name) {
+            if (['prototype', 'name', 'length', 'caller', 'arguments'].indexOf(name) !== -1) {
+                return;
+            }
+
+            try {
+                Object.defineProperty(target, name, Object.getOwnPropertyDescriptor(source, name));
+            } catch (e) {
+            }
+        });
+    }
+
+    function patchChartTimeFormatting() {
+        var ChartConstructor = window.Chart;
+        var PatchedChart;
+        var existingChanged = false;
+        if (!timeDisplayEnabled || typeof ChartConstructor !== 'function') {
+            return false;
+        }
+
+        if (ChartConstructor.__mauticLocaleFixChartPatched === true) {
+            getChartInstances().forEach(function (chart) {
+                existingChanged = applyChartTimeFormattingToInstance(chart) || existingChanged;
+            });
+            runtime.chartTimeFormattingPatched = true;
+
+            return true;
+        }
+
+        PatchedChart = function (context, config) {
+            var chart;
+            applyChartTimeFormattingToConfig(config);
+            chart = new ChartConstructor(context, config);
+            applyChartTimeFormattingToInstance(chart);
+
+            return chart;
+        };
+        copyChartConstructorProperties(PatchedChart, ChartConstructor);
+        PatchedChart.prototype = ChartConstructor.prototype;
+        PatchedChart.__mauticLocaleFixChartPatched = true;
+        PatchedChart.__mauticLocaleFixChartOriginal = ChartConstructor;
+        window.Chart = PatchedChart;
+        runtime.chartTimeFormattingPatched = true;
+
+        getChartInstances().forEach(function (chart) {
+            existingChanged = applyChartTimeFormattingToInstance(chart) || existingChanged;
+        });
+
+        return true;
+    }
+
+    function restoreChartWrapper() {
+        var ChartConstructor = window.Chart;
+        if (ChartConstructor && ChartConstructor.__mauticLocaleFixChartOriginal) {
+            window.Chart = ChartConstructor.__mauticLocaleFixChartOriginal;
+        }
+    }
+
+    function restoreChartTimeFormatting() {
+        getChartInstances().forEach(restoreChartTimeFormattingFromInstance);
+        restoreChartWrapper();
+        runtime.chartTimeFormattingPatched = false;
     }
 
     function getDateRangeMonthName(date) {
@@ -1385,6 +1822,7 @@
             runtime.dateRangeSubmitHandler = null;
             document.__mauticLocaleFixDateRangeSubmitPatched = false;
         }
+        restoreChartTimeFormatting();
         restoreLegacyDatePickerWrappers($);
         restoreCampaignSubmitWrapper();
     }
@@ -1393,6 +1831,7 @@
         var $ = getQuery();
         var patched = calendarEnabled ? patchDateTimePicker($) : false;
         var campaignPatched = patchCampaignDateTimeSubmit();
+        var chartPatched = false;
         var timeFormatted = false;
         if (calendarEnabled) {
             patchMauticDateRangePicker($);
@@ -1400,11 +1839,14 @@
             updateExistingPickers($);
         }
         if (timeDisplayEnabled) {
-            formatPlainTimeTextElements();
-            timeFormatted = true;
+            timeFormatted = formatPlainTimeTextElements();
+            chartPatched = patchChartTimeFormatting();
         }
 
-        return patched || campaignPatched || timeFormatted;
+        return patched ||
+            campaignPatched ||
+            chartPatched ||
+            (timeFormatted && (!timeDisplayEnabled || runtime.chartTimeFormattingPatched === true));
     }
 
     function installRuntimeLoop() {
@@ -1443,6 +1885,7 @@
 
     restoreLegacyDatePickerWrappers(getQuery());
     restoreCampaignSubmitWrapper();
+    restoreChartWrapper();
 
     syncSettingsFormState();
     document.addEventListener('change', syncSettingsFormState, true);

@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.23';
+    private const ASSET_VERSION = '1.0.24';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -118,6 +118,9 @@ class AssetSubscriber implements EventSubscriberInterface
     }
     if (window.Mautic && window.Mautic.submitCampaignEvent && window.Mautic.submitCampaignEvent.__mauticLocaleFixOriginal) {
         window.Mautic.submitCampaignEvent = window.Mautic.submitCampaignEvent.__mauticLocaleFixOriginal;
+    }
+    if (window.Chart && window.Chart.__mauticLocaleFixChartOriginal) {
+        window.Chart = window.Chart.__mauticLocaleFixChartOriginal;
     }
 })(window);
 JS;

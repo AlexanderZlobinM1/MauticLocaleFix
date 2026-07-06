@@ -24,6 +24,12 @@
         }
     }
 
+    function restoreChartWrapper() {
+        if (window.Chart && window.Chart.__mauticLocaleFixChartOriginal) {
+            window.Chart = window.Chart.__mauticLocaleFixChartOriginal;
+        }
+    }
+
     function deactivateRuntime() {
         if (!runtime) {
             return;
@@ -64,4 +70,5 @@
     deactivateRuntime();
     restoreLegacyDatePickerWrappers(getQuery());
     restoreCampaignSubmitWrapper();
+    restoreChartWrapper();
 })(window);
