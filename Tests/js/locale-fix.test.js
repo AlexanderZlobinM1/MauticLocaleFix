@@ -188,11 +188,30 @@ function createChartConstructor() {
     this.options = this.config.options || {};
     this.updateCalls = [];
     Chart.instances.push(this);
+    Chart._plugins.forEach((plugin) => {
+      if (typeof plugin.beforeInit === 'function') {
+        plugin.beforeInit(this);
+      }
+      if (typeof plugin.beforeUpdate === 'function') {
+        plugin.beforeUpdate(this);
+      }
+    });
 
     return this;
   }
 
   Chart.instances = [];
+  Chart._plugins = [];
+  Chart.plugins = {
+    register(plugin) {
+      if (!Chart._plugins.includes(plugin)) {
+        Chart._plugins.push(plugin);
+      }
+    },
+    unregister(plugin) {
+      Chart._plugins = Chart._plugins.filter((registered) => registered !== plugin);
+    },
+  };
   Chart.defaults = {};
   Chart.version = '2.9.4-test';
   Chart.prototype.update = function update(mode) {
@@ -754,7 +773,33 @@ function testExistingChartTicksAreFormattedWithoutMutatingLabels() {
 
   assert.deepStrictEqual(chart.data.labels, ['12:00 am', '8:00 pm']);
   assert.strictEqual(config.options.scales.xAxes[0].ticks.callback('8:00 pm'), '20:00');
-  assert.ok(chart.updateCalls.length > 0);
+  assert.strictEqual(chart.updateCalls.length, 0);
+}
+
+function testChartDateLabelsAreNotPatchedOrRedrawn() {
+  const Chart = createChartConstructor();
+  const config = {
+    data: {
+      labels: ['Jun 6, 26', 'Jul 6, 26'],
+    },
+    options: {
+      scales: {
+        xAxes: [{ticks: {}}],
+      },
+    },
+  };
+  const chart = new Chart(null, config);
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    campaignDateTimeUtcSubmit: false,
+    timeDisplayFormat: '24h',
+  }, {Chart});
+
+  assert.deepStrictEqual(chart.data.labels, ['Jun 6, 26', 'Jul 6, 26']);
+  assert.strictEqual(config.options.scales.xAxes[0].ticks.callback, undefined);
+  assert.strictEqual(chart.updateCalls.length, 0);
 }
 
 function testNativeTimeFormattingLeavesChartsUntouched() {
@@ -898,6 +943,7 @@ testNativeTimeFormattingLeavesTablesUntouched();
 testChartTicksCanUse24HourTime();
 testChartTicksCanUse12HourTime();
 testExistingChartTicksAreFormattedWithoutMutatingLabels();
+testChartDateLabelsAreNotPatchedOrRedrawn();
 testNativeTimeFormattingLeavesChartsUntouched();
 testDateRangeInitialValuesAreLocalizedButSubmitStaysNative();
 

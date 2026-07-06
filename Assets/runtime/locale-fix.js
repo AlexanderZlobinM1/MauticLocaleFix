@@ -820,6 +820,22 @@
         return formatted || value;
     }
 
+    function chartValueHasTimeText(value) {
+        if (Array.isArray(value)) {
+            return value.some(chartValueHasTimeText);
+        }
+
+        return typeof value === 'string' && formatTimeText(value) !== value;
+    }
+
+    function chartDataHasTimeLabels(data) {
+        if (!data || !Array.isArray(data.labels)) {
+            return false;
+        }
+
+        return data.labels.some(chartValueHasTimeText);
+    }
+
     function formatChartCallbackResult(result) {
         if (Array.isArray(result)) {
             return result.map(formatChartCallbackResult);
@@ -989,9 +1005,9 @@
         });
     }
 
-    function wrapChartTimeCallbacks(options) {
+    function wrapChartTimeCallbacks(options, allowFormatting) {
         var changed = false;
-        if (!options) {
+        if (!options || allowFormatting !== true) {
             return false;
         }
 
@@ -1029,13 +1045,29 @@
         return config.options || (config.config && config.config.options) || null;
     }
 
-    function applyChartTimeFormattingToConfig(config) {
+    function getChartConfigData(config) {
+        if (!config || typeof config !== 'object') {
+            return null;
+        }
+
+        return config.data || (config.config && config.config.data) || null;
+    }
+
+    function chartHasTimeLabels(chart) {
+        return chartDataHasTimeLabels(chart && chart.data) ||
+            chartDataHasTimeLabels(getChartConfigData(chart && chart.config));
+    }
+
+    function applyChartTimeFormattingToConfig(config, allowFormatting) {
         var changed = false;
         if (!timeDisplayEnabled || !config || typeof config !== 'object') {
             return false;
         }
 
-        changed = wrapChartTimeCallbacks(getChartConfigOptions(config)) || changed;
+        changed = wrapChartTimeCallbacks(
+            getChartConfigOptions(config),
+            allowFormatting === true || chartDataHasTimeLabels(getChartConfigData(config))
+        ) || changed;
 
         return changed;
     }
@@ -1049,23 +1081,6 @@
         changed = restoreChartTimeCallbacks(getChartConfigOptions(config)) || changed;
 
         return changed;
-    }
-
-    function updateChartInstance(chart) {
-        if (!chart || typeof chart.update !== 'function') {
-            return;
-        }
-
-        try {
-            chart.update('none');
-            return;
-        } catch (e) {
-        }
-
-        try {
-            chart.update(0);
-        } catch (e) {
-        }
     }
 
     function getChartConstructor() {
@@ -1110,18 +1125,91 @@
         return instances;
     }
 
+    function getChartTimePlugin() {
+        if (!runtime.chartTimePlugin) {
+            runtime.chartTimePlugin = {
+                id: 'mauticLocaleFixTimeDisplay',
+                beforeInit: function (chart) {
+                    applyChartTimeFormattingToInstance(chart);
+                },
+                beforeUpdate: function (chart) {
+                    applyChartTimeFormattingToInstance(chart);
+                }
+            };
+        }
+
+        return runtime.chartTimePlugin;
+    }
+
+    function registerChartTimePlugin() {
+        var ChartConstructor = getChartConstructor();
+        var plugin;
+        if (!ChartConstructor) {
+            return false;
+        }
+        if (ChartConstructor.__mauticLocaleFixChartTimePluginRegistered === true) {
+            return true;
+        }
+
+        plugin = getChartTimePlugin();
+
+        try {
+            if (typeof ChartConstructor.register === 'function') {
+                ChartConstructor.register(plugin);
+                ChartConstructor.__mauticLocaleFixChartTimePluginRegistered = true;
+
+                return true;
+            }
+        } catch (e) {
+        }
+
+        try {
+            if (ChartConstructor.plugins && typeof ChartConstructor.plugins.register === 'function') {
+                ChartConstructor.plugins.register(plugin);
+                ChartConstructor.__mauticLocaleFixChartTimePluginRegistered = true;
+
+                return true;
+            }
+        } catch (e) {
+        }
+
+        return false;
+    }
+
+    function unregisterChartTimePlugin() {
+        var ChartConstructor = getChartConstructor();
+        var plugin = runtime.chartTimePlugin;
+        if (!ChartConstructor || !plugin || ChartConstructor.__mauticLocaleFixChartTimePluginRegistered !== true) {
+            return;
+        }
+
+        try {
+            if (typeof ChartConstructor.unregister === 'function') {
+                ChartConstructor.unregister(plugin);
+            }
+        } catch (e) {
+        }
+
+        try {
+            if (ChartConstructor.plugins && typeof ChartConstructor.plugins.unregister === 'function') {
+                ChartConstructor.plugins.unregister(plugin);
+            }
+        } catch (e) {
+        }
+
+        ChartConstructor.__mauticLocaleFixChartTimePluginRegistered = false;
+    }
+
     function applyChartTimeFormattingToInstance(chart) {
         var changed = false;
+        var allowFormatting;
         if (!chart) {
             return false;
         }
 
-        changed = applyChartTimeFormattingToConfig(chart.config) || changed;
-        changed = wrapChartTimeCallbacks(chart.options) || changed;
-
-        if (changed) {
-            updateChartInstance(chart);
-        }
+        allowFormatting = chartHasTimeLabels(chart);
+        changed = applyChartTimeFormattingToConfig(chart.config, allowFormatting) || changed;
+        changed = wrapChartTimeCallbacks(chart.options, allowFormatting) || changed;
 
         return changed;
     }
@@ -1135,27 +1223,25 @@
         changed = restoreChartTimeFormattingFromConfig(chart.config) || changed;
         changed = restoreChartTimeCallbacks(chart.options) || changed;
 
-        if (changed) {
-            updateChartInstance(chart);
-        }
-
         return changed;
     }
 
     function patchChartTimeFormatting() {
         var chartInstances;
         var changed = false;
+        var pluginRegistered = false;
         if (!timeDisplayEnabled || typeof window.Chart !== 'function') {
             return false;
         }
 
         restoreChartWrapper();
+        pluginRegistered = registerChartTimePlugin();
         chartInstances = getChartInstances();
 
         chartInstances.forEach(function (chart) {
             changed = applyChartTimeFormattingToInstance(chart) || changed;
         });
-        runtime.chartTimeFormattingPatched = chartInstances.length > 0;
+        runtime.chartTimeFormattingPatched = pluginRegistered || chartInstances.length > 0;
 
         return runtime.chartTimeFormattingPatched || changed;
     }
@@ -1169,6 +1255,7 @@
 
     function restoreChartTimeFormatting() {
         getChartInstances().forEach(restoreChartTimeFormattingFromInstance);
+        unregisterChartTimePlugin();
         restoreChartWrapper();
         runtime.chartTimeFormattingPatched = false;
     }
