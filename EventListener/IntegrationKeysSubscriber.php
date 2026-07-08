@@ -17,7 +17,6 @@ class IntegrationKeysSubscriber implements EventSubscriberInterface
 
     private const TOGGLE_FIELDS = [
         MauticLocaleFixIntegration::CALENDAR_ENABLED_FIELD,
-        MauticLocaleFixIntegration::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD,
         MauticLocaleFixIntegration::GMAIL_IMAGE_PROXY_OPEN_FIELD,
     ];
 
