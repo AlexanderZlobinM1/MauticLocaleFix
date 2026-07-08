@@ -4,7 +4,8 @@
     var config = window.MauticLocaleFixConfig || {};
     var pluginEnabled = config.enabled === true;
     var calendarEnabled = pluginEnabled && config.calendarEnabled === true;
-    var campaignDateTimeUtcSubmit = pluginEnabled && config.campaignDateTimeUtcSubmit === true;
+    var campaignDateTimeUtcSubmit = false;
+    var chartDateLocalizationEnabled = pluginEnabled;
     var runtime = window.__mauticLocaleFixRuntime = window.__mauticLocaleFixRuntime || {};
 
     var weekStart = parseInt(config.weekStart, 10);
@@ -342,7 +343,17 @@
         return String(month || '').toLowerCase().replace(/\./g, '').trim();
     }
 
+    function normalizeYear(year) {
+        year = parseInt(year, 10);
+        if (year >= 0 && year < 100) {
+            return year >= 70 ? 1900 + year : 2000 + year;
+        }
+
+        return year;
+    }
+
     function createDate(year, month, day) {
+        year = normalizeYear(year);
         var date = new Date(year, month, day);
         if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
             return null;
@@ -360,17 +371,17 @@
             return null;
         }
 
-        match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        match = text.match(/^(\d{2}|\d{4})-(\d{1,2})-(\d{1,2})$/);
         if (match) {
             return createDate(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10));
         }
 
-        match = text.match(/^(\d{1,2})[.](\d{1,2})[.](\d{4})$/);
+        match = text.match(/^(\d{1,2})[.](\d{1,2})[.](\d{2}|\d{4})$/);
         if (match) {
             return createDate(parseInt(match[3], 10), parseInt(match[2], 10) - 1, parseInt(match[1], 10));
         }
 
-        match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
         if (match) {
             if (dateDisplayFormat === 'numeric_dmy') {
                 return createDate(parseInt(match[3], 10), parseInt(match[2], 10) - 1, parseInt(match[1], 10));
@@ -379,7 +390,7 @@
             return createDate(parseInt(match[3], 10), parseInt(match[1], 10) - 1, parseInt(match[2], 10));
         }
 
-        match = text.match(/^([A-Za-z\u00C0-\u024F\u0400-\u04FF.]+)\s+(\d{1,2}),?\s+(\d{4})$/);
+        match = text.match(/^([A-Za-z\u00C0-\u024F\u0400-\u04FF.]+)\s+(\d{1,2}),?\s+(\d{2}|\d{4})$/);
         if (match) {
             month = monthNumbers[normalizeMonthToken(match[1])];
             if (month !== undefined) {
@@ -387,7 +398,7 @@
             }
         }
 
-        match = text.match(/^(\d{1,2})\s+([A-Za-z\u00C0-\u024F\u0400-\u04FF.]+),?\s+(\d{4})$/);
+        match = text.match(/^(\d{1,2})\s+([A-Za-z\u00C0-\u024F\u0400-\u04FF.]+),?\s+(\d{2}|\d{4})$/);
         if (match) {
             month = monthNumbers[normalizeMonthToken(match[2])];
             if (month !== undefined) {
@@ -663,9 +674,9 @@
         }
 
         try {
-            var month = new Intl.DateTimeFormat(getIntlLocale(), {
-                month: dateDisplayFormat === 'locale_long' ? 'long' : 'short'
-            }).format(date).replace(/\.$/, '');
+            var month = dateDisplayFormat === 'locale_long' ?
+                new Intl.DateTimeFormat(getIntlLocale(), {month: 'long'}).format(date).replace(/\.$/, '') :
+                getDateRangeMonthName(date);
 
             return [
                 date.getDate(),
@@ -898,31 +909,61 @@
         return changed;
     }
 
-    function formatChartTimeValue(value) {
+    function chartLabelUsesShortYear(value) {
+        return /(^|[^0-9])\d{2}([^0-9]|$)/.test(String(value || '')) &&
+            !/(^|[^0-9])\d{4}([^0-9]|$)/.test(String(value || ''));
+    }
+
+    function formatChartDateValue(value) {
+        var date;
         var formatted;
-        if (!timeDisplayEnabled || typeof value !== 'string') {
+        if (!chartDateLocalizationEnabled || typeof value !== 'string') {
             return value;
         }
 
-        formatted = formatTimeText(value);
+        date = parseDateText(value);
+        if (!date) {
+            return value;
+        }
+
+        formatted = formatDate(date);
+        if (formatted && chartLabelUsesShortYear(value)) {
+            formatted = formatted.replace(String(date.getFullYear()), String(date.getFullYear()).slice(-2));
+        }
 
         return formatted || value;
     }
 
-    function chartValueHasTimeText(value) {
-        if (Array.isArray(value)) {
-            return value.some(chartValueHasTimeText);
+    function formatChartDisplayValue(value) {
+        var formatted;
+        if (typeof value !== 'string') {
+            return value;
         }
 
-        return typeof value === 'string' && formatTimeText(value) !== value;
+        if (timeDisplayEnabled) {
+            formatted = formatTimeText(value);
+            if (formatted && formatted !== value) {
+                return formatted;
+            }
+        }
+
+        return formatChartDateValue(value);
     }
 
-    function chartDataHasTimeLabels(data) {
+    function chartValueHasDisplayText(value) {
+        if (Array.isArray(value)) {
+            return value.some(chartValueHasDisplayText);
+        }
+
+        return typeof value === 'string' && formatChartDisplayValue(value) !== value;
+    }
+
+    function chartDataHasDisplayLabels(data) {
         if (!data || !Array.isArray(data.labels)) {
             return false;
         }
 
-        return data.labels.some(chartValueHasTimeText);
+        return data.labels.some(chartValueHasDisplayText);
     }
 
     function formatChartCallbackResult(result) {
@@ -930,7 +971,7 @@
             return result.map(formatChartCallbackResult);
         }
 
-        return formatChartTimeValue(result);
+        return formatChartDisplayValue(result);
     }
 
     function wrapChartCallback(callbacks, name) {
@@ -1143,19 +1184,19 @@
     }
 
     function chartHasTimeLabels(chart) {
-        return chartDataHasTimeLabels(chart && chart.data) ||
-            chartDataHasTimeLabels(getChartConfigData(chart && chart.config));
+        return chartDataHasDisplayLabels(chart && chart.data) ||
+            chartDataHasDisplayLabels(getChartConfigData(chart && chart.config));
     }
 
     function applyChartTimeFormattingToConfig(config, allowFormatting) {
         var changed = false;
-        if (!timeDisplayEnabled || !config || typeof config !== 'object') {
+        if ((!timeDisplayEnabled && !chartDateLocalizationEnabled) || !config || typeof config !== 'object') {
             return false;
         }
 
         changed = wrapChartTimeCallbacks(
             getChartConfigOptions(config),
-            allowFormatting === true || chartDataHasTimeLabels(getChartConfigData(config))
+            allowFormatting === true || chartDataHasDisplayLabels(getChartConfigData(config))
         ) || changed;
 
         return changed;
@@ -1315,11 +1356,11 @@
         return changed;
     }
 
-    function patchChartTimeFormatting() {
+    function patchChartFormatting() {
         var chartInstances;
         var changed = false;
         var pluginRegistered = false;
-        if (!timeDisplayEnabled || typeof window.Chart !== 'function') {
+        if ((!chartDateLocalizationEnabled && !timeDisplayEnabled) || typeof window.Chart !== 'function') {
             return false;
         }
 
@@ -1342,7 +1383,7 @@
         }
     }
 
-    function restoreChartTimeFormatting() {
+    function restoreChartFormatting() {
         getChartInstances().forEach(restoreChartTimeFormattingFromInstance);
         unregisterChartTimePlugin();
         restoreChartWrapper();
@@ -1870,7 +1911,6 @@
             'select[name*="calendar_week_start"]',
             'select[name*="calendar_date_format"]',
             'select[name*="time_display_format"]',
-            'input[name*="campaign_datetime_utc_submit"]',
             'input[name*="gmail_image_proxy_open"]'
         ].join(','));
         if (!featureInputs.length) {
@@ -1938,7 +1978,7 @@
             runtime.dateRangeSubmitHandler = null;
             document.__mauticLocaleFixDateRangeSubmitPatched = false;
         }
-        restoreChartTimeFormatting();
+        restoreChartFormatting();
         restoreLegacyDatePickerWrappers($);
         restoreCampaignSubmitWrapper();
     }
@@ -1957,7 +1997,9 @@
         }
         if (timeDisplayEnabled) {
             timeFormatted = formatPlainTimeTextElements();
-            chartPatched = patchChartTimeFormatting();
+        }
+        if (timeDisplayEnabled || chartDateLocalizationEnabled) {
+            chartPatched = patchChartFormatting();
         }
 
         return patched ||
@@ -2008,7 +2050,7 @@
     document.addEventListener('change', syncSettingsFormState, true);
     document.addEventListener('mauticPageLoaded', syncSettingsFormState);
 
-    if (!pluginEnabled || (!calendarEnabled && !campaignDateTimeUtcSubmit && !timeDisplayEnabled)) {
+    if (!pluginEnabled || (!calendarEnabled && !chartDateLocalizationEnabled && !timeDisplayEnabled)) {
         deactivateRuntime();
         return;
     }

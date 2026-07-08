@@ -10,10 +10,6 @@ Mautic plugin that adds regional UI settings without patching Mautic core files.
   `data-mautic-locale-fix-format="1"`.
 - Date-only formatting is intentionally limited to date-only pickers so
   date/time campaign fields keep Mautic's `Y-m-d H:i` format.
-- Optional campaign date/time submit workaround. When Mautic parses campaign
-  event dates as UTC instead of the configured Mautic timezone, the plugin can
-  submit only the campaign event `triggerDate` field as UTC while keeping the
-  operator-facing value in local Mautic time.
 - Optional Gmail/Google image proxy email-open workaround for Mautic 7 only.
   On Mautic 7, the plugin can count Gmail image proxy requests to
   `/email/*.gif` tracking pixels as email reads without changing Mautic core
@@ -23,9 +19,10 @@ Mautic plugin that adds regional UI settings without patching Mautic core files.
 - Date-only table cells that contain a recognized standalone date are formatted
   according to the configured calendar date format. Mixed text such as campaign
   names is left unchanged.
-- Timestamp/time table columns and Chart.js time labels can keep Mautic's
-  native display or be shown in either 12-hour or 24-hour form. The formatter
-  only changes visible UI text and does not change stored Mautic values.
+- Chart.js date labels follow the current Mautic UI locale. Timestamp/time table
+  columns and Chart.js time labels can keep Mautic's native display or be shown
+  in either 12-hour or 24-hour form. The formatter only changes visible UI text
+  and does not change stored Mautic values.
 - Dashboard date range fields are localized immediately on page load, not only
   after opening the picker. Before submit, those values are temporarily
   normalized back to Mautic's native `M j, Y` format so the backend keeps parsing
@@ -74,16 +71,14 @@ php bin/console cache:clear
 
 Enable **Mautic Locale Fix** in Mautic integrations, then set **Calendar week
 start**, **Calendar date format**, **Time display format in tables and charts**
-(native/no change by default), and optionally **Fix campaign date/time timezone
-submit** and **Count Gmail image proxy opens**.
+(native/no change by default), and optionally **Count Gmail image proxy opens**.
 
 ## Notes
 
 This plugin intentionally does not change global timezone settings or Mautic
 core files. It controls the first day of the week, the calendar popup language,
-selected date-only display formats, selected timestamp table and chart time
-formats, and an optional campaign builder workaround for Mautic installations
-where campaign event date/time submit handling parses local Mautic time as UTC.
-The Gmail image proxy workaround is limited to email tracking pixel requests and
-does not disable global bot filtering for page hits, assets, prefetch, DNT, or
-Sec-GPC requests.
+selected date-only display formats, chart date localization, and selected
+timestamp table and chart time formats. Campaign date/time values are left to
+Mautic's own user and system timezone settings. The Gmail image proxy workaround
+is limited to email tracking pixel requests and does not disable global bot
+filtering for page hits, assets, prefetch, DNT, or Sec-GPC requests.

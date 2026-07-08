@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.31';
+    private const ASSET_VERSION = '1.0.32';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -41,7 +41,6 @@ class AssetSubscriber implements EventSubscriberInterface
 
         $published                 = $this->isIntegrationPublished($integration);
         $calendarEnabled           = $published && $integration->isCalendarFixEnabled();
-        $campaignDateTimeUtcSubmit = $published && $integration->isCampaignDateTimeUtcSubmitEnabled();
         $gmailImageProxyOpen       = $published && $integration->isGmailImageProxyOpenEnabled();
 
         $config = [
@@ -52,7 +51,6 @@ class AssetSubscriber implements EventSubscriberInterface
             'dateFormat'                => $integration->getCalendarDateFormat(),
             'timeDisplayFormat'         => $integration->getTimeDisplayFormat(),
             'mauticTimezone'            => $this->getMauticTimezone(),
-            'campaignDateTimeUtcSubmit' => $campaignDateTimeUtcSubmit,
             'gmailImageProxyOpen'       => $gmailImageProxyOpen,
         ];
 

@@ -249,7 +249,7 @@ function testDisabledConfigDoesNothing() {
   assert.strictEqual(env.submitListeners.length, 0);
 }
 
-function testCampaignSubmitConvertsLocalMauticTimeToUtc() {
+function testCampaignSubmitTimezoneWorkaroundIsDisabledEvenIfSaved() {
   const seen = [];
   const input = createInput('2026-06-29 13:00');
   const env = runPlugin({
@@ -266,24 +266,22 @@ function testCampaignSubmitConvertsLocalMauticTimeToUtc() {
     },
   });
 
-  assert.strictEqual(env.input.value, '2026-06-29 15:00');
-  assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-local-display'), '1');
-  assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-original-utc'), '2026-06-29 13:00');
+  assert.strictEqual(env.input.value, '2026-06-29 13:00');
+  assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-local-display'), null);
+  assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-original-utc'), null);
 
   env.window.Mautic.submitCampaignEvent();
-  assert.deepStrictEqual(seen, ['2026-06-29 13:00:00']);
-  assert.strictEqual(env.input.value, '2026-06-29 13:00:00');
-  assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-utc-submit'), '1');
-
-  env.submitListeners[0]({target: env.form});
-  assert.strictEqual(env.input.value, '2026-06-29 13:00:00');
+  assert.deepStrictEqual(seen, ['2026-06-29 13:00']);
+  assert.strictEqual(env.input.value, '2026-06-29 13:00');
+  assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-utc-submit'), null);
+  assert.strictEqual(env.submitListeners.length, 0);
 
   env.flushTimeouts();
-  assert.strictEqual(env.input.value, '2026-06-29 15:00');
+  assert.strictEqual(env.input.value, '2026-06-29 13:00');
   assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-utc-submit'), null);
 }
 
-function testCampaignTriggerDateDisplayLocalizesStoredUtcOnce() {
+function testCampaignTriggerDateDisplayIsLeftToMauticUserTimezone() {
   const input = createInput('2026-07-07 07:00');
   const env = runPlugin({
     enabled: true,
@@ -297,12 +295,12 @@ function testCampaignTriggerDateDisplayLocalizesStoredUtcOnce() {
     },
   });
 
-  assert.strictEqual(env.input.value, '2026-07-07 09:00');
+  assert.strictEqual(env.input.value, '2026-07-07 07:00');
   env.flushIntervals();
-  assert.strictEqual(env.input.value, '2026-07-07 09:00');
+  assert.strictEqual(env.input.value, '2026-07-07 07:00');
 }
 
-function testBlankCampaignTriggerDateKeepsUserLocalInput() {
+function testBlankCampaignTriggerDateIsNotNormalized() {
   const seen = [];
   const input = createInput('');
   const env = runPlugin({
@@ -319,13 +317,13 @@ function testBlankCampaignTriggerDateKeepsUserLocalInput() {
     },
   });
 
-  assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-local-display'), '1');
+  assert.strictEqual(env.input.getAttribute('data-mautic-locale-fix-local-display'), null);
   env.input.value = '2026-07-07 09:00';
   env.flushIntervals();
   assert.strictEqual(env.input.value, '2026-07-07 09:00');
 
   env.window.Mautic.submitCampaignEvent();
-  assert.deepStrictEqual(seen, ['2026-07-07 07:00:00']);
+  assert.deepStrictEqual(seen, ['2026-07-07 09:00']);
 }
 
 function testCampaignSubmitDoesNotPatchDatepickerWhenCalendarFixIsOff() {
@@ -859,7 +857,7 @@ function testExistingChartTicksAreFormattedWithoutMutatingLabels() {
   assert.strictEqual(chart.updateCalls.length, 0);
 }
 
-function testChartDateLabelsAreNotPatchedOrRedrawn() {
+function testChartDateLabelsUseLocaleWithoutMutatingLabelsOrRedrawing() {
   const Chart = createChartConstructor();
   const config = {
     data: {
@@ -877,11 +875,13 @@ function testChartDateLabelsAreNotPatchedOrRedrawn() {
     enabled: true,
     calendarEnabled: false,
     campaignDateTimeUtcSubmit: false,
-    timeDisplayFormat: '24h',
+    timeDisplayFormat: 'native',
+    locale: 'ru',
   }, {Chart});
 
   assert.deepStrictEqual(chart.data.labels, ['Jun 6, 26', 'Jul 6, 26']);
-  assert.strictEqual(config.options.scales.xAxes[0].ticks.callback, undefined);
+  assert.strictEqual(config.options.scales.xAxes[0].ticks.callback('Jun 6, 26'), '6 Июн 26');
+  assert.strictEqual(config.options.scales.xAxes[0].ticks.callback('Jul 6, 26'), '6 Июл 26');
   assert.strictEqual(chart.updateCalls.length, 0);
 }
 
@@ -1009,9 +1009,9 @@ function testDateRangeInitialValuesAreLocalizedButSubmitStaysNative() {
 }
 
 testDisabledConfigDoesNothing();
-testCampaignSubmitConvertsLocalMauticTimeToUtc();
-testCampaignTriggerDateDisplayLocalizesStoredUtcOnce();
-testBlankCampaignTriggerDateKeepsUserLocalInput();
+testCampaignSubmitTimezoneWorkaroundIsDisabledEvenIfSaved();
+testCampaignTriggerDateDisplayIsLeftToMauticUserTimezone();
+testBlankCampaignTriggerDateIsNotNormalized();
 testCampaignSubmitDoesNotPatchDatepickerWhenCalendarFixIsOff();
 testThirdPartyDatePickerKeepsItsOptionsUntouched();
 testCalendarFixSetsDefaultWeekStartWithoutWrappingDatepicker();
@@ -1029,7 +1029,7 @@ testNativeTimeFormattingLeavesTablesUntouched();
 testChartTicksCanUse24HourTime();
 testChartTicksCanUse12HourTime();
 testExistingChartTicksAreFormattedWithoutMutatingLabels();
-testChartDateLabelsAreNotPatchedOrRedrawn();
+testChartDateLabelsUseLocaleWithoutMutatingLabelsOrRedrawing();
 testNativeTimeFormattingLeavesChartsUntouched();
 testDateRangeInitialValuesAreLocalizedButSubmitStaysNative();
 

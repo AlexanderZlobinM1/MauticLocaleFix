@@ -22,8 +22,6 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public const TIME_DISPLAY_FORMAT_FIELD = 'time_display_format';
 
-    public const CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD = 'campaign_datetime_utc_submit';
-
     public const GMAIL_IMAGE_PROXY_OPEN_FIELD = 'gmail_image_proxy_open';
 
     public function getName()
@@ -153,20 +151,6 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                         'tooltip' => 'mautic.integration.mauticlocalefix.time_display_format.tooltip',
                     ],
                 ]
-            )
-            ->add(
-                self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD,
-                YesNoButtonGroupType::class,
-                [
-                    'label' => 'mautic.integration.mauticlocalefix.campaign_datetime_utc_submit',
-                    'data'  => array_key_exists(self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD, $data)
-                        ? (bool) $data[self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD]
-                        : true,
-                    'attr'  => [
-                        'class'   => 'mauticlocalefix-feature-toggle',
-                        'tooltip' => 'mautic.integration.mauticlocalefix.campaign_datetime_utc_submit.tooltip',
-                    ],
-                ]
             );
 
         if (!$this->isGmailImageProxyOpenSupported()) {
@@ -226,11 +210,6 @@ class MauticLocaleFixIntegration extends AbstractIntegration
         ];
 
         return in_array($format, $allowed, true) ? $format : 'locale_medium';
-    }
-
-    public function isCampaignDateTimeUtcSubmitEnabled(): bool
-    {
-        return $this->isToggleEnabled(self::CAMPAIGN_DATETIME_UTC_SUBMIT_FIELD, true);
     }
 
     public function getTimeDisplayFormat(): string
