@@ -84,7 +84,7 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                 [
                     'label' => 'mautic.integration.mauticlocalefix.calendar_enabled',
                     'data'  => array_key_exists(self::CALENDAR_ENABLED_FIELD, $data)
-                        ? (bool) $data[self::CALENDAR_ENABLED_FIELD]
+                        ? self::normalizeToggleValue($data[self::CALENDAR_ENABLED_FIELD], false)
                         : false,
                     'attr'  => [
                         'class'   => 'mauticlocalefix-calendar-toggle',
@@ -163,7 +163,7 @@ class MauticLocaleFixIntegration extends AbstractIntegration
             [
                 'label' => 'mautic.integration.mauticlocalefix.gmail_image_proxy_open',
                 'data'  => array_key_exists(self::GMAIL_IMAGE_PROXY_OPEN_FIELD, $data)
-                    ? (bool) $data[self::GMAIL_IMAGE_PROXY_OPEN_FIELD]
+                    ? self::normalizeToggleValue($data[self::GMAIL_IMAGE_PROXY_OPEN_FIELD], false)
                     : false,
                 'attr'  => [
                     'class'   => 'mauticlocalefix-feature-toggle',
@@ -246,7 +246,11 @@ class MauticLocaleFixIntegration extends AbstractIntegration
             return $default;
         }
 
-        $value = $this->keys[$field];
+        return self::normalizeToggleValue($this->keys[$field], $default);
+    }
+
+    private static function normalizeToggleValue(mixed $value, bool $default): bool
+    {
         if (is_bool($value)) {
             return $value;
         }

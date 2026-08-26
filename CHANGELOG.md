@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.39 - 2026-08-26
+
+- Fixed integration toggle rendering when Mautic supplies the persisted
+  `enabled` or `disabled` strings directly to the form. The UI now uses the
+  same strict boolean normalization as runtime execution, so a disabled
+  feature is displayed as disabled and remains available for manual enabling.
+
 ## 1.0.38 - 2026-08-26
 
 - Stopped loading the Locale Fix runtime asset while the integration is
