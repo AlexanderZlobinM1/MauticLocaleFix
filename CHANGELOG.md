@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.36 - 2026-08-26
+
+- Added `mautic:locale-fix:configure` so automation can publish or unpublish the
+  integration and enable or disable Gmail image proxy opens through Mautic's
+  encrypted integration settings API.
+- This keeps the same explicit on/off behavior as the UI and avoids direct
+  database writes to encrypted integration keys.
+
 ## 1.0.35 - 2026-08-26
 
 - Restored the integration publication gate for Gmail image proxy open

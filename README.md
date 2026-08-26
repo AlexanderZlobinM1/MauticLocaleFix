@@ -83,3 +83,9 @@ Mautic's own user and system timezone settings. The Gmail image proxy workaround
 requires the integration to be published and its dedicated setting enabled. It
 is limited to email tracking pixel requests and does not disable global bot
 filtering for page hits, assets, prefetch, DNT, or Sec-GPC requests.
+
+Automation can apply the same explicit settings through Mautic services:
+
+```bash
+bin/console mautic:locale-fix:configure --published=1 --gmail-image-proxy-open=1
+```

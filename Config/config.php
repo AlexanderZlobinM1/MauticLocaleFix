@@ -3,7 +3,7 @@
 return [
     'name'        => 'Mautic Locale Fix',
     'description' => 'Regional UI settings for Mautic without core patches.',
-    'version'     => '1.0.35',
+    'version'     => '1.0.36',
     'author'      => 'Sales Snap',
     'services'    => [
         'events' => [
@@ -46,6 +46,15 @@ return [
                     'mautic.lead.model.dnc',
                     'mautic.lead.field.fields_with_unique_identifier',
                 ],
+            ],
+        ],
+        'command' => [
+            'plugin.mauticlocalefix.command.configure' => [
+                'class'     => MauticPlugin\MauticLocaleFixBundle\Command\ConfigureCommand::class,
+                'arguments' => [
+                    'mautic.helper.integration',
+                ],
+                'tag'       => 'console.command',
             ],
         ],
     ],
