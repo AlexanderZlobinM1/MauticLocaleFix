@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.37';
+    private const ASSET_VERSION = '1.0.38';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -40,6 +40,12 @@ class AssetSubscriber implements EventSubscriberInterface
         }
 
         $published                 = $this->isIntegrationPublished($integration);
+        if (!$published) {
+            $event->addScriptDeclaration($this->getLegacyCleanupScript(), 'bodyClose');
+
+            return;
+        }
+
         $calendarEnabled           = $published && $integration->isCalendarFixEnabled();
         $gmailImageProxyOpen       = $published && $integration->isGmailImageProxyOpenEnabled();
 

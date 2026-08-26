@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.38 - 2026-08-26
+
+- Stopped loading the Locale Fix runtime asset while the integration is
+  unpublished. Disabled integrations now only clear any runtime left from an
+  earlier enabled state and do not execute feature code.
+
 ## 1.0.37 - 2026-08-26
 
 - Changed unset feature toggles to disabled so publishing the integration never
