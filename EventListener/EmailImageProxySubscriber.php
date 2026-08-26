@@ -50,6 +50,7 @@ class EmailImageProxySubscriber implements EventSubscriberInterface
 
         $integration = $this->getIntegration();
         if (!$integration instanceof MauticLocaleFixIntegration ||
+            !$this->isIntegrationPublished($integration) ||
             !$integration->isGmailImageProxyOpenEnabled()
         ) {
             return;
@@ -84,6 +85,36 @@ class EmailImageProxySubscriber implements EventSubscriberInterface
         }
 
         return $integration;
+    }
+
+    private function isIntegrationPublished(MauticLocaleFixIntegration $integration): bool
+    {
+        $settings  = $integration->getIntegrationSettings();
+        $known     = false;
+        $published = false;
+        if (is_object($settings)) {
+            if (method_exists($settings, 'isPublished')) {
+                $published = (bool) $settings->isPublished();
+                $known     = true;
+            } elseif (method_exists($settings, 'getIsPublished')) {
+                $published = (bool) $settings->getIsPublished();
+                $known     = true;
+            } elseif (method_exists($settings, 'getPublished')) {
+                $published = (bool) $settings->getPublished();
+                $known     = true;
+            }
+        } elseif (is_array($settings)) {
+            $published = (bool) ($settings['isPublished'] ?? $settings['is_published'] ?? $settings['published'] ?? false);
+            $known     = array_key_exists('isPublished', $settings) ||
+                array_key_exists('is_published', $settings) ||
+                array_key_exists('published', $settings);
+        }
+
+        if (!$known && method_exists($integration, 'isPublished')) {
+            return (bool) $integration->isPublished();
+        }
+
+        return $published;
     }
 
 }
