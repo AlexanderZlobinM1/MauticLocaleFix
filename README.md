@@ -10,12 +10,13 @@ Mautic plugin that adds regional UI settings without patching Mautic core files.
   `data-mautic-locale-fix-format="1"`.
 - Date-only formatting is intentionally limited to date-only pickers so
   date/time campaign fields keep Mautic's `Y-m-d H:i` format.
-- Optional Gmail/Google image proxy email-open workaround for Mautic 7 only.
-  On Mautic 7, the plugin can count Gmail image proxy requests to
+- Gmail/Google image proxy email-open workaround for Mautic 7 only.
+  On Mautic 7, the installed plugin counts Gmail image proxy requests to
   `/email/*.gif` tracking pixels as email reads without changing Mautic core
-  files. On other Mautic majors this setting is hidden and the workaround is
-  disabled even if an old saved key exists. Other bot filtering remains
-  untouched.
+  files, including after migrations where the plugin integration has not yet
+  been published. An explicitly disabled **Count Gmail image proxy opens**
+  setting is respected. On other Mautic majors the workaround is disabled even
+  if an old saved key exists. Other bot filtering remains untouched.
 - Date-only table cells that contain a recognized standalone date are formatted
   according to the configured calendar date format. Mixed text such as campaign
   names is left unchanged.
@@ -80,5 +81,7 @@ core files. It controls the first day of the week, the calendar popup language,
 selected date-only display formats, chart date localization, and selected
 timestamp table and chart time formats. Campaign date/time values are left to
 Mautic's own user and system timezone settings. The Gmail image proxy workaround
-is limited to email tracking pixel requests and does not disable global bot
-filtering for page hits, assets, prefetch, DNT, or Sec-GPC requests.
+is enabled by default when the bundle is installed on Mautic 7, even while the
+integration itself is unpublished. It is limited to email tracking pixel
+requests and does not disable global bot filtering for page hits, assets,
+prefetch, DNT, or Sec-GPC requests.
