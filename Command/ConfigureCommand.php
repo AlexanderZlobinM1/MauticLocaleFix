@@ -27,6 +27,7 @@ class ConfigureCommand extends Command
         $this
             ->setDescription('Configure the Mautic Locale Fix integration through Mautic services.')
             ->addOption('published', null, InputOption::VALUE_REQUIRED, 'Publish the integration: 1 or 0')
+            ->addOption('calendar-enabled', null, InputOption::VALUE_REQUIRED, 'Enable calendar fixes: 1 or 0')
             ->addOption(
                 'gmail-image-proxy-open',
                 null,
@@ -59,9 +60,15 @@ class ConfigureCommand extends Command
         }
 
         $gmailProxyOpen = $this->parseBooleanOption($input, 'gmail-image-proxy-open');
-        if (null !== $gmailProxyOpen) {
+        $calendarEnabled = $this->parseBooleanOption($input, 'calendar-enabled');
+        if (null !== $gmailProxyOpen || null !== $calendarEnabled) {
             $keys = $integration->getDecryptedApiKeys($settings);
-            $keys[MauticLocaleFixIntegration::GMAIL_IMAGE_PROXY_OPEN_FIELD] = $gmailProxyOpen;
+            if (null !== $gmailProxyOpen) {
+                $keys[MauticLocaleFixIntegration::GMAIL_IMAGE_PROXY_OPEN_FIELD] = $gmailProxyOpen;
+            }
+            if (null !== $calendarEnabled) {
+                $keys[MauticLocaleFixIntegration::CALENDAR_ENABLED_FIELD] = $calendarEnabled;
+            }
             $integration->encryptAndSetApiKeys($keys, $settings);
             $changed = true;
         }
@@ -71,8 +78,9 @@ class ConfigureCommand extends Command
         }
 
         $output->writeln(sprintf(
-            '<info>Mautic Locale Fix configured: published=%s gmail_image_proxy_open=%s</info>',
+            '<info>Mautic Locale Fix configured: published=%s calendar_enabled=%s gmail_image_proxy_open=%s</info>',
             $settings->getIsPublished() ? '1' : '0',
+            $integration->isCalendarFixEnabled() ? '1' : '0',
             $integration->isGmailImageProxyOpenEnabled() ? '1' : '0'
         ));
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.37 - 2026-08-26
+
+- Changed unset feature toggles to disabled so publishing the integration never
+  activates calendar or Gmail proxy behavior implicitly.
+- Extended the configuration command with `--calendar-enabled`; automation can
+  now publish the integration while explicitly selecting each behavior.
+
 ## 1.0.36 - 2026-08-26
 
 - Added `mautic:locale-fix:configure` so automation can publish or unpublish the

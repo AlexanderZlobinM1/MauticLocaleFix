@@ -85,7 +85,7 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                     'label' => 'mautic.integration.mauticlocalefix.calendar_enabled',
                     'data'  => array_key_exists(self::CALENDAR_ENABLED_FIELD, $data)
                         ? (bool) $data[self::CALENDAR_ENABLED_FIELD]
-                        : true,
+                        : false,
                     'attr'  => [
                         'class'   => 'mauticlocalefix-calendar-toggle',
                         'tooltip' => 'mautic.integration.mauticlocalefix.calendar_enabled.tooltip',
@@ -164,7 +164,7 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                 'label' => 'mautic.integration.mauticlocalefix.gmail_image_proxy_open',
                 'data'  => array_key_exists(self::GMAIL_IMAGE_PROXY_OPEN_FIELD, $data)
                     ? (bool) $data[self::GMAIL_IMAGE_PROXY_OPEN_FIELD]
-                    : true,
+                    : false,
                 'attr'  => [
                     'class'   => 'mauticlocalefix-feature-toggle',
                     'tooltip' => 'mautic.integration.mauticlocalefix.gmail_image_proxy_open.tooltip',
@@ -188,7 +188,7 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public function isCalendarFixEnabled(): bool
     {
-        return $this->isToggleEnabled(self::CALENDAR_ENABLED_FIELD, true);
+        return $this->isToggleEnabled(self::CALENDAR_ENABLED_FIELD, false);
     }
 
     public function getCalendarWeekStart(): int
@@ -222,7 +222,7 @@ class MauticLocaleFixIntegration extends AbstractIntegration
     public function isGmailImageProxyOpenEnabled(): bool
     {
         return $this->isGmailImageProxyOpenSupported() &&
-            $this->isToggleEnabled(self::GMAIL_IMAGE_PROXY_OPEN_FIELD, true);
+            $this->isToggleEnabled(self::GMAIL_IMAGE_PROXY_OPEN_FIELD, false);
     }
 
     public function isGmailImageProxyOpenSupported(): bool

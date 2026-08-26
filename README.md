@@ -87,5 +87,5 @@ filtering for page hits, assets, prefetch, DNT, or Sec-GPC requests.
 Automation can apply the same explicit settings through Mautic services:
 
 ```bash
-bin/console mautic:locale-fix:configure --published=1 --gmail-image-proxy-open=1
+bin/console mautic:locale-fix:configure --published=1 --calendar-enabled=0 --gmail-image-proxy-open=1
 ```
