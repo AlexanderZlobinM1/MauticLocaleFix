@@ -3,7 +3,7 @@
 return [
     'name'        => 'Mautic Locale Fix',
     'description' => 'Regional UI settings for Mautic without core patches.',
-    'version'     => '1.0.39',
+    'version'     => '1.0.40',
     'author'      => 'Sales Snap',
     'services'    => [
         'events' => [
@@ -23,6 +23,13 @@ return [
             ],
             'plugin.mauticlocalefix.integration_keys_subscriber' => [
                 'class' => MauticPlugin\MauticLocaleFixBundle\EventListener\IntegrationKeysSubscriber::class,
+            ],
+            'plugin.mauticlocalefix.import_search_subscriber' => [
+                'class'     => MauticPlugin\MauticLocaleFixBundle\EventListener\ImportSearchSubscriber::class,
+                'arguments' => [
+                    'mautic.helper.integration',
+                    'translator',
+                ],
             ],
         ],
         'integrations' => [

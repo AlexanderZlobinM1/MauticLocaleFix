@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.40 - 2026-08-27
+
+- Fixed import count links in every UI locale by normalizing the translated
+  `import_id` and `import_action` search commands before Mautic parses them.
+- Kept normalization dynamic: the active translation catalog is used, so new
+  locales do not require hard-coded aliases or Mautic core changes.
+
 ## 1.0.39 - 2026-08-26
 
 - Fixed integration toggle rendering when Mautic supplies the persisted
