@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.41 - 2026-09-05
+
+- Retained the Gmail/Google image proxy workaround and its switch on Mautic
+  7.2.0: the official core still rejects proxy requests in `IpLookupHelper`
+  before email-open processing, despite the related merged upstream PR.
+- Added regression coverage for the existing Google tracking controls and
+  runtime on 7.1.3 and 7.2.0, including disabled and unpublished states and
+  preservation of independent regional settings.
+- Added a reproducible check of the exact Mautic 7.2.0 tracking gate with its
+  locked Matomo 6.5.0 dependency. No runtime or UI behavior changed.
+
 ## 1.0.40 - 2026-08-27
 
 - Fixed import count links in every UI locale by normalizing the translated

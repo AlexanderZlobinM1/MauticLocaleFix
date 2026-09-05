@@ -89,3 +89,15 @@ Automation can apply the same explicit settings through Mautic services:
 ```bash
 bin/console mautic:locale-fix:configure --published=1 --calendar-enabled=0 --gmail-image-proxy-open=1
 ```
+
+## Google tracking compatibility audit
+
+The Gmail image proxy workaround remains available on Mautic 7.2.0.
+Although upstream PR [#15870](https://github.com/mautic/mautic/pull/15870)
+closed the related issue, the exact 7.2.0 core still rejects Google/Gmail proxy
+requests before updating email-open statistics. Removing the workaround based
+only on that PR would reintroduce missed opens. See
+[the source audit and reproduction](Tests/UPSTREAM_7_2_0.md).
+
+This does not enable the integration or its switches automatically. Calendar,
+date/time formatting, imports, and all other independent behavior are unchanged.
