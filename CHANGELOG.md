@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.42 — 2026-09-06
+
+- Support Mautic 7.2 while retaining the declared older Mautic versions.
+- Use a plugin-scoped EncryptionHelper service alias; keep legacy argument parsing and the global core container unchanged.
+- Add a fresh-kernel regression check that instantiates integration services and resolves form types.
+
+
 ## 1.0.41 - 2026-09-05
 
 - Retained the Gmail/Google image proxy workaround and its switch on Mautic

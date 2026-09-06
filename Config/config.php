@@ -3,7 +3,7 @@
 return [
     'name'        => 'Mautic Locale Fix',
     'description' => 'Regional UI settings for Mautic without core patches.',
-    'version'     => '1.0.41',
+    'version'     => '1.0.42',
     'author'      => 'Sales Snap',
     'services'    => [
         'events' => [
@@ -43,7 +43,7 @@ return [
                     'router',
                     'translator',
                     'logger',
-                    'mautic.helper.encryption',
+                    'mauticlocalefixbundle.helper.encryption',
                     'mautic.lead.model.lead',
                     'mautic.lead.model.company',
                     'mautic.helper.paths',

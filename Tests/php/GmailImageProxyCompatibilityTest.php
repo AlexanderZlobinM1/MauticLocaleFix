@@ -42,7 +42,7 @@ namespace {
     use Symfony\Component\HttpKernel\HttpKernelInterface;
 
     $version = $argv[1] ?? '7.2.0';
-    $expected = true;
+    $expected = str_starts_with($version, '7.');
     if ('undefined' !== $version) {
         define('MAUTIC_VERSION', $version);
     }
@@ -82,13 +82,13 @@ namespace {
     $check($expected === $integration->isGmailImageProxyOpenEnabled(), 'Saved enabled key respects version');
     $config = require dirname(__DIR__, 2).'/Config/config.php';
     $events = $config['services']['events'];
-    $check(isset($events['plugin.mauticlocalefix.email_image_proxy_subscriber']) === $expected, 'Google service registration');
+    $check(isset($events['plugin.mauticlocalefix.email_image_proxy_subscriber']), 'Google service registration');
     foreach (['asset_subscriber', 'integration_keys_subscriber', 'import_search_subscriber'] as $service) {
         $check(isset($events['plugin.mauticlocalefix.'.$service]), 'Independent service remains: '.$service);
     }
     $check(isset($config['services']['integrations']['mautic.integration.mauticlocalefix']), 'Integration remains registered');
     $check(isset($config['services']['command']['plugin.mauticlocalefix.command.configure']), 'Configuration command remains');
-    $check(([] !== EmailImageProxySubscriber::getSubscribedEvents()) === $expected, 'Google event subscription');
+    $check([] !== EmailImageProxySubscriber::getSubscribedEvents(), 'Google event subscription');
     $helper = new \Mautic\PluginBundle\Helper\IntegrationHelper($integration);
     $subscriber = new EmailImageProxySubscriber($helper);
     $kernel = new class implements HttpKernelInterface {
