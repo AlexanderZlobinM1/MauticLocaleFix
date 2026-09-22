@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.38';
+    private const ASSET_VERSION = '1.0.43';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -57,6 +57,7 @@ class AssetSubscriber implements EventSubscriberInterface
             'dateFormat'                => $integration->getCalendarDateFormat(),
             'timeDisplayFormat'         => $integration->getTimeDisplayFormat(),
             'mauticTimezone'            => $this->getMauticTimezone(),
+            'timezoneLabelMode'         => $integration->getTimezoneLabelMode(),
             'gmailImageProxyOpen'       => $gmailImageProxyOpen,
         ];
 
@@ -113,7 +114,16 @@ class AssetSubscriber implements EventSubscriberInterface
             runtime.dateRangeSubmitHandler = null;
             document.__mauticLocaleFixDateRangeSubmitPatched = false;
         }
+        if (runtime.timezoneLabelInputHandler) {
+            document.removeEventListener('input', runtime.timezoneLabelInputHandler, true);
+            document.removeEventListener('change', runtime.timezoneLabelInputHandler, true);
+            runtime.timezoneLabelInputHandler = null;
+        }
     }
+    document.__mauticLocaleFixTimezoneLabelPatched = false;
+    Array.prototype.forEach.call(document.querySelectorAll('.mautic-locale-fix-timezone-label'), function (badge) {
+        badge.remove();
+    });
     if ($ && $.fn && $.fn.datetimepicker && $.fn.datetimepicker.__mauticLocaleFixOriginal) {
         $.fn.datetimepicker = $.fn.datetimepicker.__mauticLocaleFixOriginal;
     }

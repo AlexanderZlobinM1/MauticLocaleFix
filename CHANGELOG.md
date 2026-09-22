@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.43 — 2026-09-22
+
+- Add one operator-controlled timezone-label format for campaign
+  activation/deactivation and time-based campaign event fields.
+- Support a date-aware UTC offset, short international timezone abbreviation, or
+  hidden label; the selected date determines the DST-aware result.
+- Render the label inline in the date/time control, immediately after the value;
+  no submitted, stored, API, or export value is changed. Choosing hidden or
+  disabling the integration removes it.
+- Add configuration-command support and focused browser/PHP regressions.
+
 ## 1.0.42 — 2026-09-06
 
 - Support Mautic 7.2 while retaining the declared older Mautic versions.

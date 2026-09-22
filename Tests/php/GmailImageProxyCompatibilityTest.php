@@ -60,6 +60,7 @@ namespace {
         'calendar_week_start' => 0,
         'calendar_date_format' => 'iso',
         'time_display_format' => '24h',
+        'timezone_label_mode' => 'short',
     ];
     $integration->setKeys($saved);
     $builder = new class {
@@ -71,13 +72,14 @@ namespace {
     };
     $integration->appendToForm($builder, $saved, 'keys');
     $check(isset($builder->fields['gmail_image_proxy_open']) === $expected, 'Google switch visibility');
-    foreach (['calendar_enabled', 'calendar_week_start', 'calendar_date_format', 'time_display_format'] as $field) {
+    foreach (['calendar_enabled', 'calendar_week_start', 'calendar_date_format', 'time_display_format', 'timezone_label_mode'] as $field) {
         $check(isset($builder->fields[$field]), 'Independent field remains: '.$field);
     }
     $check($integration->isCalendarFixEnabled(), 'Calendar remains enabled');
     $check(0 === $integration->getCalendarWeekStart(), 'Week start retained');
     $check('iso' === $integration->getCalendarDateFormat(), 'Date format retained');
     $check('24h' === $integration->getTimeDisplayFormat(), 'Time format retained');
+    $check('short' === $integration->getTimezoneLabelMode(), 'Timezone label mode retained');
     $check(['regional_settings'] === $integration->getSupportedFeatures(), 'Regional feature remains');
     $check($expected === $integration->isGmailImageProxyOpenEnabled(), 'Saved enabled key respects version');
     $config = require dirname(__DIR__, 2).'/Config/config.php';

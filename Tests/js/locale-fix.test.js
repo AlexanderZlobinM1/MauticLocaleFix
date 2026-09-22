@@ -9,10 +9,13 @@ const source = fs.readFileSync(
 );
 
 function createInput(value, options = {}) {
-  const attrs = Object.assign({}, options.attrs || {});
+    const attrs = Object.assign({}, options.attrs || {});
 
-  return {
-    value,
+    return {
+        value,
+        id: options.id || '',
+        name: options.name || '',
+        parentElement: options.parentElement || null,
     getAttribute(name) {
       return Object.prototype.hasOwnProperty.call(attrs, name) ? attrs[name] : null;
     },
@@ -24,6 +27,48 @@ function createInput(value, options = {}) {
     },
     matches(selector) {
       return typeof options.matches === 'function' ? options.matches(selector) : false;
+    },
+  };
+}
+
+function createInputGroup(input) {
+  const children = [input];
+  const group = {
+    children,
+    classList: {
+      contains(name) {
+        return name === 'input-group';
+      },
+    },
+    insertBefore(child, reference) {
+      const index = reference ? children.indexOf(reference) : -1;
+      child.parentNode = group;
+      if (index === -1) {
+        children.push(child);
+      } else {
+        children.splice(index, 0, child);
+      }
+    },
+  };
+
+  input.parentElement = group;
+  Object.defineProperty(input, 'nextSibling', {
+    get() {
+      const index = children.indexOf(input);
+      return index === -1 ? null : children[index + 1] || null;
+    },
+  });
+
+  return group;
+}
+
+function createLabel() {
+  const children = [];
+  return {
+    children,
+    appendChild(child) {
+      child.parentNode = this;
+      children.push(child);
     },
   };
 }
@@ -125,6 +170,21 @@ function runPlugin(config, options = {}) {
       if (type === 'submit') {
         submitListeners.push(listener);
       }
+    },
+    removeEventListener() {},
+    createElement() {
+      return {
+        className: '',
+        setAttribute() {},
+        remove() {
+          if (this.parentNode) {
+            const index = this.parentNode.children.indexOf(this);
+            if (index !== -1) {
+              this.parentNode.children.splice(index, 1);
+            }
+          }
+        },
+      };
     },
   };
   const window = {
@@ -1008,6 +1068,104 @@ function testDateRangeInitialValuesAreLocalizedButSubmitStaysNative() {
   assert.strictEqual(toInput.value, 'Июл 3, 2026');
 }
 
+function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
+  const input = createInput('2026-07-15 12:00', {
+    id: 'campaign_publishUp',
+    name: 'campaign[publishUp]',
+  });
+  const control = createInputGroup(input);
+  const label = createLabel();
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    timezoneLabelMode: 'offset',
+    mauticTimezone: 'Europe/Belgrade',
+  }, {
+    input,
+    querySelector(selector) {
+      return selector === 'label[for="campaign_publishUp"]' ? label : null;
+    },
+    querySelectorAll(selector) {
+      return selector.indexOf('[publishUp]') !== -1 ? [input] : [];
+    },
+  });
+
+  assert.strictEqual(label.children.length, 0);
+  assert.strictEqual(control.children.length, 2);
+  assert.strictEqual(control.children[0], input);
+  assert.strictEqual(control.children[1].textContent, ' (UTC+02:00)');
+  assert.ok(control.children[1].className.indexOf('input-group-addon') !== -1);
+  assert.strictEqual(input.value, '2026-07-15 12:00');
+}
+
+function testTimezoneShortNameUsesInternationalAbbreviation() {
+  const input = createInput('2026-04-17 08:00', {
+    id: 'campaign_publishUp',
+    name: 'campaign[publishUp]',
+  });
+  const control = createInputGroup(input);
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    timezoneLabelMode: 'short',
+    mauticTimezone: 'Europe/Moscow',
+  }, {
+    input,
+    querySelectorAll(selector) {
+      return selector.indexOf('[publishUp]') !== -1 ? [input] : [];
+    },
+  });
+
+  assert.strictEqual(control.children[1].textContent, ' (MSK)');
+  assert.strictEqual(input.value, '2026-04-17 08:00');
+}
+
+function testTimezoneShortNameAndHiddenMode() {
+  const input = createInput('2026-01-15 12:00', {
+    id: 'campaign_publishDown',
+    name: 'campaign[publishDown]',
+  });
+  const control = createInputGroup(input);
+  const options = {
+    input,
+    querySelectorAll(selector) {
+      return selector.indexOf('[publishDown]') !== -1 ? [input] : [];
+    },
+  };
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    timezoneLabelMode: 'short',
+    mauticTimezone: 'Europe/Belgrade',
+  }, options);
+
+  assert.strictEqual(control.children.length, 2);
+  assert.strictEqual(control.children[1].textContent, ' (CET)');
+
+  const hiddenInput = createInput('2026-01-15 12:00', {
+    id: 'campaign_publishDown',
+    name: 'campaign[publishDown]',
+  });
+  const hiddenControl = createInputGroup(hiddenInput);
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    timezoneLabelMode: 'hidden',
+    mauticTimezone: 'Europe/Belgrade',
+  }, Object.assign({}, options, {
+    input: hiddenInput,
+    querySelectorAll(selector) {
+      return selector.indexOf('[publishDown]') !== -1 ? [hiddenInput] : [];
+    },
+  }));
+
+  assert.strictEqual(hiddenControl.children.length, 1);
+  assert.strictEqual(hiddenInput.value, '2026-01-15 12:00');
+}
+
 testDisabledConfigDoesNothing();
 testCampaignSubmitTimezoneWorkaroundIsDisabledEvenIfSaved();
 testCampaignTriggerDateDisplayIsLeftToMauticUserTimezone();
@@ -1032,5 +1190,8 @@ testExistingChartTicksAreFormattedWithoutMutatingLabels();
 testChartDateLabelsUseLocaleWithoutMutatingLabelsOrRedrawing();
 testNativeTimeFormattingLeavesChartsUntouched();
 testDateRangeInitialValuesAreLocalizedButSubmitStaysNative();
+testTimezoneOffsetLabelUsesScheduledDateDstOffset();
+testTimezoneShortNameUsesInternationalAbbreviation();
+testTimezoneShortNameAndHiddenMode();
 
 console.log('locale-fix tests passed');

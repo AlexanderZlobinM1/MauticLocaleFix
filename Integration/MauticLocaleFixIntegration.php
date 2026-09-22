@@ -22,6 +22,8 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public const TIME_DISPLAY_FORMAT_FIELD = 'time_display_format';
 
+    public const TIMEZONE_LABEL_MODE_FIELD = 'timezone_label_mode';
+
     public const GMAIL_IMAGE_PROXY_OPEN_FIELD = 'gmail_image_proxy_open';
 
     public function getName()
@@ -151,6 +153,25 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                         'tooltip' => 'mautic.integration.mauticlocalefix.time_display_format.tooltip',
                     ],
                 ]
+            )
+            ->add(
+                self::TIMEZONE_LABEL_MODE_FIELD,
+                ChoiceType::class,
+                [
+                    'label'       => 'mautic.integration.mauticlocalefix.timezone_label_mode',
+                    'required'    => true,
+                    'choices'     => [
+                        'mautic.integration.mauticlocalefix.timezone_label_mode.offset' => 'offset',
+                        'mautic.integration.mauticlocalefix.timezone_label_mode.short'  => 'short',
+                        'mautic.integration.mauticlocalefix.timezone_label_mode.hidden' => 'hidden',
+                    ],
+                    'data'        => $data[self::TIMEZONE_LABEL_MODE_FIELD] ?? 'offset',
+                    'placeholder' => false,
+                    'attr'        => [
+                        'class'   => 'form-control mauticlocalefix-timezone-label-dependent',
+                        'tooltip' => 'mautic.integration.mauticlocalefix.timezone_label_mode.tooltip',
+                    ],
+                ]
             );
 
         if (!$this->isGmailImageProxyOpenSupported()) {
@@ -217,6 +238,13 @@ class MauticLocaleFixIntegration extends AbstractIntegration
         $format = (string) ($this->keys[self::TIME_DISPLAY_FORMAT_FIELD] ?? 'native');
 
         return in_array($format, ['native', '12h', '24h'], true) ? $format : 'native';
+    }
+
+    public function getTimezoneLabelMode(): string
+    {
+        $mode = (string) ($this->keys[self::TIMEZONE_LABEL_MODE_FIELD] ?? 'offset');
+
+        return in_array($mode, ['offset', 'short', 'hidden'], true) ? $mode : 'offset';
     }
 
     public function isGmailImageProxyOpenEnabled(): bool

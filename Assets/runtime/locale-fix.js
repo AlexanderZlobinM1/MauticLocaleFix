@@ -32,6 +32,18 @@
     var timeDisplayEnabled = pluginEnabled && ['12h', '24h'].indexOf(timeDisplayFormat) !== -1;
 
     var mauticTimezone = String(config.mauticTimezone || '').trim();
+    var timezoneLabelMode = ['offset', 'short', 'hidden'].indexOf(String(config.timezoneLabelMode || 'offset')) !== -1
+        ? String(config.timezoneLabelMode || 'offset')
+        : 'offset';
+    var scheduledDateTimeSelector = [
+        'input[name*="[publishUp]"]',
+        'input[name*="[publishDown]"]',
+        'input[name*="[triggerDate]"]',
+        'input[name*="[triggerHour]"]',
+        'input[name*="[triggerRestrictedStartHour]"]',
+        'input[name*="[triggerRestrictedStopHour]"]',
+        '[data-mautic-locale-fix-timezone-label="1"]'
+    ].join(',');
 
     var pickerFormatByDisplayFormat = {
         locale_medium: 'd M Y',
@@ -455,6 +467,243 @@
         });
 
         return parts;
+    }
+
+    function timezoneReferenceDate(input) {
+        var parts = parseMauticDateTimeText(input && input.value);
+        var localDate;
+
+        if (parts && mauticTimezone) {
+            localDate = localDateTimeToUtcDate(parts, mauticTimezone);
+            if (localDate) {
+                return localDate;
+            }
+        }
+
+        return new Date();
+    }
+
+    function timezoneOffsetLabel(date) {
+        var parts = getTimeZoneDateParts(date, mauticTimezone);
+        var offset;
+        var absolute;
+        var sign;
+
+        if (!parts || !parts.year || !parts.month || !parts.day || isNaN(parts.hour)) {
+            return '';
+        }
+
+        offset = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute || 0, parts.second || 0) - date.getTime();
+        absolute = Math.abs(Math.round(offset / 60000));
+        sign = offset < 0 ? '-' : '+';
+
+        return 'UTC' + sign + pad(Math.floor(absolute / 60)) + ':' + pad(absolute % 60);
+    }
+
+    var timezoneAbbreviationFallbacks = {
+        'Europe/Belgrade': {standard: 'CET', daylight: 'CEST'},
+        'Europe/Berlin': {standard: 'CET', daylight: 'CEST'},
+        'Europe/Brussels': {standard: 'CET', daylight: 'CEST'},
+        'Europe/Budapest': {standard: 'CET', daylight: 'CEST'},
+        'Europe/Madrid': {standard: 'CET', daylight: 'CEST'},
+        'Europe/Paris': {standard: 'CET', daylight: 'CEST'},
+        'Europe/Rome': {standard: 'CET', daylight: 'CEST'},
+        'Europe/Warsaw': {standard: 'CET', daylight: 'CEST'},
+        'Europe/London': {standard: 'GMT', daylight: 'BST'},
+        'Europe/Moscow': {standard: 'MSK'},
+        'America/New_York': {standard: 'EST', daylight: 'EDT'},
+        'America/Toronto': {standard: 'EST', daylight: 'EDT'},
+        'America/Chicago': {standard: 'CST', daylight: 'CDT'},
+        'America/Denver': {standard: 'MST', daylight: 'MDT'},
+        'America/Los_Angeles': {standard: 'PST', daylight: 'PDT'},
+        'America/Phoenix': {standard: 'MST'},
+        'Asia/Dubai': {standard: 'GST'},
+        'Asia/Kolkata': {standard: 'IST'},
+        'Asia/Singapore': {standard: 'SGT'},
+        'Asia/Tokyo': {standard: 'JST'},
+        'Australia/Sydney': {standard: 'AEST', daylight: 'AEDT'},
+        'Pacific/Auckland': {standard: 'NZST', daylight: 'NZDT'}
+    };
+
+    function fallbackTimezoneAbbreviation(date) {
+        var fallback = timezoneAbbreviationFallbacks[mauticTimezone];
+        var currentOffset;
+        var januaryOffset;
+        var julyOffset;
+
+        if (!fallback) {
+            return '';
+        }
+        if (!fallback.daylight) {
+            return fallback.standard;
+        }
+
+        currentOffset = timezoneOffsetMinutes(date);
+        januaryOffset = timezoneOffsetMinutes(new Date(Date.UTC(date.getUTCFullYear(), 0, 15, 12, 0, 0)));
+        julyOffset = timezoneOffsetMinutes(new Date(Date.UTC(date.getUTCFullYear(), 6, 15, 12, 0, 0)));
+
+        if (currentOffset !== januaryOffset && currentOffset === julyOffset) {
+            return fallback.daylight;
+        }
+
+        return fallback.standard;
+    }
+
+    function timezoneShortName(date) {
+        var parts;
+        var fallback;
+        try {
+            parts = new Intl.DateTimeFormat('en-GB', {
+                timeZone: mauticTimezone,
+                timeZoneName: 'short'
+            }).formatToParts(date);
+        } catch (e) {
+            return fallbackTimezoneAbbreviation(date);
+        }
+
+        for (var i = 0; i < parts.length; i += 1) {
+            if (parts[i].type === 'timeZoneName') {
+                fallback = parts[i].value;
+                if (!/^GMT(?:[+-]|$)/.test(fallback)) {
+                    return fallback;
+                }
+
+                return fallbackTimezoneAbbreviation(date) || fallback;
+            }
+        }
+
+        return fallbackTimezoneAbbreviation(date);
+    }
+
+    function timezoneLabelValue(input) {
+        var date;
+        if (!mauticTimezone || !window.Intl || !Intl.DateTimeFormat || timezoneLabelMode === 'hidden') {
+            return '';
+        }
+
+        date = timezoneReferenceDate(input);
+
+        return timezoneLabelMode === 'short' ? timezoneShortName(date) : timezoneOffsetLabel(date);
+    }
+
+    function hasClass(element, className) {
+        return !!(element && element.classList && typeof element.classList.contains === 'function' && element.classList.contains(className));
+    }
+
+    function badgeForScheduledDateTimeInput(input) {
+        var parent = input && input.parentElement;
+        var children = parent && parent.children ? parent.children : [];
+
+        for (var i = 0; i < children.length; i += 1) {
+            if (children[i] && children[i].className && String(children[i].className).indexOf('mautic-locale-fix-timezone-label') !== -1) {
+                return children[i];
+            }
+        }
+
+        return null;
+    }
+
+    function removeTimezoneLabel(input) {
+        var badge = badgeForScheduledDateTimeInput(input);
+        if (badge && typeof badge.remove === 'function') {
+            badge.remove();
+        }
+    }
+
+    function timezoneControlGroup(input) {
+        var parent = input && input.parentElement;
+        var group;
+
+        if (!parent) {
+            return null;
+        }
+
+        if (hasClass(parent, 'input-group')) {
+            return parent;
+        }
+
+        if (!document.createElement || typeof parent.insertBefore !== 'function') {
+            return null;
+        }
+
+        group = document.createElement('div');
+        group.className = 'input-group mautic-locale-fix-timezone-control';
+        if (group.style) {
+            group.style.width = '100%';
+        }
+        if (typeof group.appendChild !== 'function') {
+            return null;
+        }
+
+        parent.insertBefore(group, input);
+        group.appendChild(input);
+
+        return group;
+    }
+
+    function insertTimezoneLabel(input, badge) {
+        var group = timezoneControlGroup(input);
+
+        if (!group || typeof group.insertBefore !== 'function') {
+            return false;
+        }
+
+        group.insertBefore(badge, input.nextSibling || null);
+
+        return true;
+    }
+
+    function updateTimezoneLabel(input) {
+        var badge;
+        var value;
+
+        if (!input) {
+            return false;
+        }
+
+        if (timezoneLabelMode === 'hidden') {
+            removeTimezoneLabel(input);
+
+            return false;
+        }
+
+        value = timezoneLabelValue(input);
+        if (!value || !document.createElement) {
+            return false;
+        }
+
+        badge = badgeForScheduledDateTimeInput(input);
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'input-group-addon mautic-locale-fix-timezone-label';
+            if (!insertTimezoneLabel(input, badge)) {
+                return false;
+            }
+        }
+
+        badge.textContent = ' (' + value + ')';
+        badge.title = mauticTimezone;
+
+        return true;
+    }
+
+    function updateTimezoneLabels() {
+        var inputs = queryAll(scheduledDateTimeSelector);
+        var updated = false;
+
+        Array.prototype.forEach.call(inputs, function (input) {
+            updated = updateTimezoneLabel(input) || updated;
+        });
+
+        return updated;
+    }
+
+    function removeTimezoneLabels() {
+        Array.prototype.forEach.call(queryAll('.mautic-locale-fix-timezone-label'), function (badge) {
+            if (badge && typeof badge.remove === 'function') {
+                badge.remove();
+            }
+        });
     }
 
     function localDateTimeToUtcDate(parts, timezone) {
@@ -1911,6 +2160,7 @@
             'select[name*="calendar_week_start"]',
             'select[name*="calendar_date_format"]',
             'select[name*="time_display_format"]',
+            'select[name*="timezone_label_mode"]',
             'input[name*="gmail_image_proxy_open"]'
         ].join(','));
         if (!featureInputs.length) {
@@ -1978,6 +2228,13 @@
             runtime.dateRangeSubmitHandler = null;
             document.__mauticLocaleFixDateRangeSubmitPatched = false;
         }
+        if (runtime.timezoneLabelInputHandler) {
+            document.removeEventListener('input', runtime.timezoneLabelInputHandler, true);
+            document.removeEventListener('change', runtime.timezoneLabelInputHandler, true);
+            runtime.timezoneLabelInputHandler = null;
+        }
+        document.__mauticLocaleFixTimezoneLabelPatched = false;
+        removeTimezoneLabels();
         restoreChartFormatting();
         restoreLegacyDatePickerWrappers($);
         restoreCampaignSubmitWrapper();
@@ -1990,6 +2247,7 @@
         var campaignPatched = patchCampaignDateTimeSubmit();
         var chartPatched = false;
         var timeFormatted = false;
+        var timezoneLabelsUpdated = updateTimezoneLabels();
         if (calendarEnabled) {
             patchMauticDateRangePicker($);
             patchDateRangeSubmit();
@@ -2005,6 +2263,7 @@
         return patched ||
             campaignPatched ||
             chartPatched ||
+            timezoneLabelsUpdated ||
             (timeFormatted && (!timeDisplayEnabled || runtime.chartTimeFormattingPatched === true));
     }
 
@@ -2029,6 +2288,18 @@
         document.addEventListener('mauticPageLoaded', runtime.pageLoadedHandler);
         document.addEventListener('ajaxComplete', runtime.pageLoadedHandler);
 
+        if (timezoneLabelMode !== 'hidden' && document.__mauticLocaleFixTimezoneLabelPatched !== true) {
+            runtime.timezoneLabelInputHandler = function (event) {
+                var input = event.target;
+                if (input && input.matches && input.matches(scheduledDateTimeSelector)) {
+                    updateTimezoneLabel(input);
+                }
+            };
+            document.addEventListener('input', runtime.timezoneLabelInputHandler, true);
+            document.addEventListener('change', runtime.timezoneLabelInputHandler, true);
+            document.__mauticLocaleFixTimezoneLabelPatched = true;
+        }
+
         if ('MutationObserver' in window) {
             runtime.observer = new MutationObserver(function () {
                 window.clearTimeout(runtime.observerTimer);
@@ -2050,7 +2321,7 @@
     document.addEventListener('change', syncSettingsFormState, true);
     document.addEventListener('mauticPageLoaded', syncSettingsFormState);
 
-    if (!pluginEnabled || (!calendarEnabled && !chartDateLocalizationEnabled && !timeDisplayEnabled)) {
+    if (!pluginEnabled || (!calendarEnabled && !chartDateLocalizationEnabled && !timeDisplayEnabled && timezoneLabelMode === 'hidden')) {
         deactivateRuntime();
         return;
     }

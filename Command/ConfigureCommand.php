@@ -28,6 +28,7 @@ class ConfigureCommand extends Command
             ->setDescription('Configure the Mautic Locale Fix integration through Mautic services.')
             ->addOption('published', null, InputOption::VALUE_REQUIRED, 'Publish the integration: 1 or 0')
             ->addOption('calendar-enabled', null, InputOption::VALUE_REQUIRED, 'Enable calendar fixes: 1 or 0')
+            ->addOption('timezone-label-mode', null, InputOption::VALUE_REQUIRED, 'Timezone label: offset, short, or hidden')
             ->addOption(
                 'gmail-image-proxy-open',
                 null,
@@ -61,13 +62,17 @@ class ConfigureCommand extends Command
 
         $gmailProxyOpen = $this->parseBooleanOption($input, 'gmail-image-proxy-open');
         $calendarEnabled = $this->parseBooleanOption($input, 'calendar-enabled');
-        if (null !== $gmailProxyOpen || null !== $calendarEnabled) {
+        $timezoneLabelMode = $this->parseTimezoneLabelModeOption($input);
+        if (null !== $gmailProxyOpen || null !== $calendarEnabled || null !== $timezoneLabelMode) {
             $keys = $integration->getDecryptedApiKeys($settings);
             if (null !== $gmailProxyOpen) {
                 $keys[MauticLocaleFixIntegration::GMAIL_IMAGE_PROXY_OPEN_FIELD] = $gmailProxyOpen;
             }
             if (null !== $calendarEnabled) {
                 $keys[MauticLocaleFixIntegration::CALENDAR_ENABLED_FIELD] = $calendarEnabled;
+            }
+            if (null !== $timezoneLabelMode) {
+                $keys[MauticLocaleFixIntegration::TIMEZONE_LABEL_MODE_FIELD] = $timezoneLabelMode;
             }
             $integration->encryptAndSetApiKeys($keys, $settings);
             $changed = true;
@@ -78,9 +83,10 @@ class ConfigureCommand extends Command
         }
 
         $output->writeln(sprintf(
-            '<info>Mautic Locale Fix configured: published=%s calendar_enabled=%s gmail_image_proxy_open=%s</info>',
+            '<info>Mautic Locale Fix configured: published=%s calendar_enabled=%s timezone_label_mode=%s gmail_image_proxy_open=%s</info>',
             $settings->getIsPublished() ? '1' : '0',
             $integration->isCalendarFixEnabled() ? '1' : '0',
+            $integration->getTimezoneLabelMode(),
             $integration->isGmailImageProxyOpenEnabled() ? '1' : '0'
         ));
 
@@ -103,5 +109,20 @@ class ConfigureCommand extends Command
         }
 
         throw new \InvalidArgumentException(sprintf('--%s must be 1 or 0.', $name));
+    }
+
+    private function parseTimezoneLabelModeOption(InputInterface $input): ?string
+    {
+        $value = $input->getOption('timezone-label-mode');
+        if (null === $value) {
+            return null;
+        }
+
+        $mode = strtolower(trim((string) $value));
+        if (in_array($mode, ['offset', 'short', 'hidden'], true)) {
+            return $mode;
+        }
+
+        throw new \InvalidArgumentException('--timezone-label-mode must be offset, short, or hidden.');
     }
 }

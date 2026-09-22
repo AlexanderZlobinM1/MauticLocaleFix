@@ -23,6 +23,12 @@ Mautic plugin that adds regional UI settings without patching Mautic core files.
   columns and Chart.js time labels can keep Mautic's native display or be shown
   in either 12-hour or 24-hour form. The formatter only changes visible UI text
   and does not change stored Mautic values.
+- Campaign activation/deactivation and time-based campaign event fields can show
+  the configured Mautic timezone beside their labels. The setting can be turned
+  off and supports a date-aware UTC offset (for example `UTC+02:00`), a short
+  international name (for example `CEST`), or a hidden label. The displayed
+  offset and abbreviation follow the selected date, including DST changes; the
+  plugin never changes the submitted or stored value.
 - Dashboard date range fields are localized immediately on page load, not only
   after opening the picker. Before submit, those values are temporarily
   normalized back to Mautic's native `M j, Y` format so the backend keeps parsing
@@ -71,23 +77,26 @@ php bin/console cache:clear
 
 Enable **Mautic Locale Fix** in Mautic integrations, then set **Calendar week
 start**, **Calendar date format**, **Time display format in tables and charts**
-(native/no change by default), and optionally **Count Gmail image proxy opens**.
+(native/no change by default), **Timezone label format for scheduled fields** (UTC offset, short international
+timezone name, or hidden), and optionally **Count Gmail image proxy
+opens**.
 
 ## Notes
 
 This plugin intentionally does not change global timezone settings or Mautic
 core files. It controls the first day of the week, the calendar popup language,
 selected date-only display formats, chart date localization, and selected
-timestamp table and chart time formats. Campaign date/time values are left to
-Mautic's own user and system timezone settings. The Gmail image proxy workaround
-requires the integration to be published and its dedicated setting enabled. It
-is limited to email tracking pixel requests and does not disable global bot
-filtering for page hits, assets, prefetch, DNT, or Sec-GPC requests.
+timestamp table and chart time formats, and optional timezone labels for
+scheduled campaign fields. Campaign date/time values remain Mautic's own user
+and system timezone values. The Gmail image proxy workaround requires the
+integration to be published and its dedicated setting enabled. It is limited to
+email tracking pixel requests and does not disable global bot filtering for page
+hits, assets, prefetch, DNT, or Sec-GPC requests.
 
 Automation can apply the same explicit settings through Mautic services:
 
 ```bash
-bin/console mautic:locale-fix:configure --published=1 --calendar-enabled=0 --gmail-image-proxy-open=1
+bin/console mautic:locale-fix:configure --published=1 --calendar-enabled=0 --timezone-label-mode=offset --gmail-image-proxy-open=1
 ```
 
 ## Google tracking compatibility audit
