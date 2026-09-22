@@ -2,12 +2,12 @@
 
 Last reviewed: 22 September 2026.
 
-Current published release: `1.0.42` (`3ab6e11`). Candidate `1.0.43` adds one plugin integration selector and browser-side,
-inline labels for scheduled campaign date/time fields; it has passed focused
-browser regression and PHP form/config checks on the Mautic 6.0.9 and 7.2.0
-dependency trees. Operations accepted the 1.0.43 UI scope on Bigartmail (Mautic 7.2.0 / PHP
-8.4.25); publication is in progress. The acceptance does not cover
-save/reopen or campaign-event flows.
+Current published release: `1.0.43` (`a9f61ef`, tag `v1.0.43`). It adds one
+plugin integration selector and browser-side, inline labels for scheduled
+campaign date/time fields. It passed focused browser regression and PHP
+form/config checks on the Mautic 6.0.9 and 7.2.0 dependency trees. Operations
+accepted the UI scope on Bigartmail (Mautic 7.2.0 / PHP 8.4.25); it does not
+cover save/reopen or campaign-event flows.
 Declared support: Mautic 6.x, 7.x; PHP >=8.1.
 
 | Mautic | Status | Confirmed scope |
