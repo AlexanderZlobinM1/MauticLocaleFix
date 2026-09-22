@@ -2,8 +2,9 @@
 
 Last reviewed: 23 September 2026.
 
-Published release before this change: `1.0.44` (`8961bcb`, tag `v1.0.44`).
-Release `1.0.45` adds an opt-in inactive-campaign schedule editor; its default
+Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`); preceding
+release `1.0.44` is `8961bcb`. Release `1.0.45` adds an opt-in
+inactive-campaign schedule editor; its default
 preserves Mautic's disabled date/time inputs. Local browser regression and PHP
 form/config checks pass on the Mautic 6.0.9 and 7.2.0 dependency trees. The
 operator manually accepted the campaign editor UI checks on Bigartmail. The
