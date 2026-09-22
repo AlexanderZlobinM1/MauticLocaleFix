@@ -24,6 +24,8 @@ class MauticLocaleFixIntegration extends AbstractIntegration
 
     public const TIMEZONE_LABEL_MODE_FIELD = 'timezone_label_mode';
 
+    public const ALLOW_INACTIVE_CAMPAIGN_SCHEDULE_EDIT_FIELD = 'allow_inactive_campaign_schedule_edit';
+
     public const GMAIL_IMAGE_PROXY_OPEN_FIELD = 'gmail_image_proxy_open';
 
     public function getName()
@@ -155,6 +157,20 @@ class MauticLocaleFixIntegration extends AbstractIntegration
                 ]
             )
             ->add(
+                self::ALLOW_INACTIVE_CAMPAIGN_SCHEDULE_EDIT_FIELD,
+                YesNoButtonGroupType::class,
+                [
+                    'label' => 'mautic.integration.mauticlocalefix.allow_inactive_campaign_schedule_edit',
+                    'data'  => array_key_exists(self::ALLOW_INACTIVE_CAMPAIGN_SCHEDULE_EDIT_FIELD, $data)
+                        ? self::normalizeToggleValue($data[self::ALLOW_INACTIVE_CAMPAIGN_SCHEDULE_EDIT_FIELD], false)
+                        : false,
+                    'attr'  => [
+                        'class'   => 'mauticlocalefix-feature-toggle',
+                        'tooltip' => 'mautic.integration.mauticlocalefix.allow_inactive_campaign_schedule_edit.tooltip',
+                    ],
+                ]
+            )
+            ->add(
                 self::TIMEZONE_LABEL_MODE_FIELD,
                 ChoiceType::class,
                 [
@@ -238,6 +254,11 @@ class MauticLocaleFixIntegration extends AbstractIntegration
         $format = (string) ($this->keys[self::TIME_DISPLAY_FORMAT_FIELD] ?? 'native');
 
         return in_array($format, ['native', '12h', '24h'], true) ? $format : 'native';
+    }
+
+    public function isInactiveCampaignScheduleEditAllowed(): bool
+    {
+        return $this->isToggleEnabled(self::ALLOW_INACTIVE_CAMPAIGN_SCHEDULE_EDIT_FIELD, false);
     }
 
     public function getTimezoneLabelMode(): string

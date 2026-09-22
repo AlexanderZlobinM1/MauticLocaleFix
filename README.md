@@ -78,7 +78,8 @@ php bin/console cache:clear
 Enable **Mautic Locale Fix** in Mautic integrations, then set **Calendar week
 start**, **Calendar date format**, **Time display format in tables and charts**
 (native/no change by default), **Timezone label format for scheduled fields** (UTC offset, short international
-timezone name, or hidden), and optionally **Count Gmail image proxy
+timezone name, or hidden), and optionally **Allow schedule editing while campaign
+is inactive** (off by default), and **Count Gmail image proxy
 opens**.
 
 ## Notes
@@ -97,7 +98,7 @@ hits, assets, prefetch, DNT, or Sec-GPC requests.
 Automation can apply the same explicit settings through Mautic services:
 
 ```bash
-bin/console mautic:locale-fix:configure --published=1 --calendar-enabled=0 --timezone-label-mode=offset --gmail-image-proxy-open=1
+bin/console mautic:locale-fix:configure --published=1 --calendar-enabled=0 --timezone-label-mode=offset --allow-inactive-campaign-schedule-edit=1 --gmail-image-proxy-open=1
 ```
 
 ## Google tracking compatibility audit

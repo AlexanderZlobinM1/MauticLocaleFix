@@ -29,6 +29,7 @@ class ConfigureCommand extends Command
             ->addOption('published', null, InputOption::VALUE_REQUIRED, 'Publish the integration: 1 or 0')
             ->addOption('calendar-enabled', null, InputOption::VALUE_REQUIRED, 'Enable calendar fixes: 1 or 0')
             ->addOption('timezone-label-mode', null, InputOption::VALUE_REQUIRED, 'Timezone label: offset, short, or hidden')
+            ->addOption('allow-inactive-campaign-schedule-edit', null, InputOption::VALUE_REQUIRED, 'Allow schedule edits for inactive campaigns: 1 or 0')
             ->addOption(
                 'gmail-image-proxy-open',
                 null,
@@ -63,13 +64,17 @@ class ConfigureCommand extends Command
         $gmailProxyOpen = $this->parseBooleanOption($input, 'gmail-image-proxy-open');
         $calendarEnabled = $this->parseBooleanOption($input, 'calendar-enabled');
         $timezoneLabelMode = $this->parseTimezoneLabelModeOption($input);
-        if (null !== $gmailProxyOpen || null !== $calendarEnabled || null !== $timezoneLabelMode) {
+        $allowInactiveCampaignScheduleEdit = $this->parseBooleanOption($input, 'allow-inactive-campaign-schedule-edit');
+        if (null !== $gmailProxyOpen || null !== $calendarEnabled || null !== $timezoneLabelMode || null !== $allowInactiveCampaignScheduleEdit) {
             $keys = $integration->getDecryptedApiKeys($settings);
             if (null !== $gmailProxyOpen) {
                 $keys[MauticLocaleFixIntegration::GMAIL_IMAGE_PROXY_OPEN_FIELD] = $gmailProxyOpen;
             }
             if (null !== $calendarEnabled) {
                 $keys[MauticLocaleFixIntegration::CALENDAR_ENABLED_FIELD] = $calendarEnabled;
+            }
+            if (null !== $allowInactiveCampaignScheduleEdit) {
+                $keys[MauticLocaleFixIntegration::ALLOW_INACTIVE_CAMPAIGN_SCHEDULE_EDIT_FIELD] = $allowInactiveCampaignScheduleEdit;
             }
             if (null !== $timezoneLabelMode) {
                 $keys[MauticLocaleFixIntegration::TIMEZONE_LABEL_MODE_FIELD] = $timezoneLabelMode;
@@ -83,9 +88,10 @@ class ConfigureCommand extends Command
         }
 
         $output->writeln(sprintf(
-            '<info>Mautic Locale Fix configured: published=%s calendar_enabled=%s timezone_label_mode=%s gmail_image_proxy_open=%s</info>',
+            '<info>Mautic Locale Fix configured: published=%s calendar_enabled=%s allow_inactive_campaign_schedule_edit=%s timezone_label_mode=%s gmail_image_proxy_open=%s</info>',
             $settings->getIsPublished() ? '1' : '0',
             $integration->isCalendarFixEnabled() ? '1' : '0',
+            $integration->isInactiveCampaignScheduleEditAllowed() ? '1' : '0',
             $integration->getTimezoneLabelMode(),
             $integration->isGmailImageProxyOpenEnabled() ? '1' : '0'
         ));

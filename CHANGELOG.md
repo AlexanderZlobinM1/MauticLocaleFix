@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.45 — 2026-09-23
+
+- Add an opt-in setting that permits editing campaign activation and deactivation
+  date/time controls while the campaign is inactive; the default retains Mautic's
+  disabled controls and turning the setting off restores them.
+- Handle this plugin's settings toggles locally to avoid duplicate core inline
+  callbacks and support Mautic 7.2's direct integration settings route.
+- A profile timezone change alone does not alter stored campaign schedule
+  timestamps (verified on the installed Bigartmail 1.0.45 build).
+
 ## 1.0.44 — 2026-09-22
 
 - Resolve scheduled-field timezone labels from the active Mautic user's timezone,

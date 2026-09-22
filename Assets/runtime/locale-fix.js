@@ -32,6 +32,8 @@
     var timeDisplayEnabled = pluginEnabled && ['12h', '24h'].indexOf(timeDisplayFormat) !== -1;
 
     var mauticTimezone = String(config.mauticTimezone || '').trim();
+    var allowInactiveCampaignScheduleEdit = pluginEnabled && config.allowInactiveCampaignScheduleEdit === true;
+    var inactiveCampaignScheduleSelector = 'input[name*="[publishUp]"],input[name*="[publishDown]"]';
     var timezoneLabelMode = ['offset', 'short', 'hidden'].indexOf(String(config.timezoneLabelMode || 'offset')) !== -1
         ? String(config.timezoneLabelMode || 'offset')
         : 'offset';
@@ -704,6 +706,76 @@
                 badge.remove();
             }
         });
+    }
+
+    function campaignScheduleDatepickerButton(input) {
+        var id;
+        var container;
+
+        if (!input || !input.id) {
+            return null;
+        }
+
+        id = String(input.id).replace(/(["\\])/g, '\\$1');
+        container = findFieldContainer(input);
+
+        return container ? queryOne('label.btn-datepicker[for="' + id + '"]', container) : null;
+    }
+
+    function setCampaignScheduleDatepickerButtonEnabled(input, enabled) {
+        var button = campaignScheduleDatepickerButton(input);
+        if (!button) {
+            return;
+        }
+
+        if (button.classList) {
+            button.classList.toggle('disabled', !enabled);
+        }
+        if (typeof button.setAttribute === 'function') {
+            button.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+        }
+    }
+
+    function restoreInactiveCampaignScheduleInputs() {
+        Array.prototype.forEach.call(queryAll('[data-mautic-locale-fix-inactive-schedule-edit="1"]'), function (input) {
+            input.disabled = true;
+            if (typeof input.setAttribute === 'function') {
+                input.setAttribute('disabled', 'disabled');
+            }
+            setCampaignScheduleDatepickerButtonEnabled(input, false);
+            if (typeof input.removeAttribute === 'function') {
+                input.removeAttribute('data-mautic-locale-fix-inactive-schedule-edit');
+            }
+        });
+    }
+
+    function allowInactiveCampaignScheduleInputs() {
+        var changed = false;
+
+        if (!allowInactiveCampaignScheduleEdit) {
+            restoreInactiveCampaignScheduleInputs();
+
+            return false;
+        }
+
+        Array.prototype.forEach.call(queryAll(inactiveCampaignScheduleSelector), function (input) {
+            if (!input || input.disabled !== true) {
+                return;
+            }
+
+            input.disabled = false;
+            if (typeof input.removeAttribute === 'function') {
+                input.removeAttribute('disabled');
+            }
+            setCampaignScheduleDatepickerButtonEnabled(input, true);
+            if (typeof input.setAttribute === 'function') {
+                input.setAttribute('data-mautic-locale-fix-inactive-schedule-edit', '1');
+                input.setAttribute('aria-disabled', 'false');
+            }
+            changed = true;
+        });
+
+        return changed;
     }
 
     function localDateTimeToUtcDate(parts, timezone) {
@@ -2161,6 +2233,7 @@
             'select[name*="calendar_date_format"]',
             'select[name*="time_display_format"]',
             'select[name*="timezone_label_mode"]',
+            'input[name*="allow_inactive_campaign_schedule_edit"]',
             'input[name*="gmail_image_proxy_open"]'
         ].join(','));
         if (!featureInputs.length) {
@@ -2233,7 +2306,12 @@
             document.removeEventListener('change', runtime.timezoneLabelInputHandler, true);
             runtime.timezoneLabelInputHandler = null;
         }
+        if (runtime.inactiveCampaignScheduleChangeHandler) {
+            document.removeEventListener('change', runtime.inactiveCampaignScheduleChangeHandler, true);
+            runtime.inactiveCampaignScheduleChangeHandler = null;
+        }
         document.__mauticLocaleFixTimezoneLabelPatched = false;
+        restoreInactiveCampaignScheduleInputs();
         removeTimezoneLabels();
         restoreChartFormatting();
         restoreLegacyDatePickerWrappers($);
@@ -2248,6 +2326,7 @@
         var chartPatched = false;
         var timeFormatted = false;
         var timezoneLabelsUpdated = updateTimezoneLabels();
+        var inactiveCampaignScheduleInputsAllowed = allowInactiveCampaignScheduleInputs();
         if (calendarEnabled) {
             patchMauticDateRangePicker($);
             patchDateRangeSubmit();
@@ -2264,6 +2343,7 @@
             campaignPatched ||
             chartPatched ||
             timezoneLabelsUpdated ||
+            inactiveCampaignScheduleInputsAllowed ||
             (timeFormatted && (!timeDisplayEnabled || runtime.chartTimeFormattingPatched === true));
     }
 
@@ -2298,6 +2378,18 @@
             document.addEventListener('input', runtime.timezoneLabelInputHandler, true);
             document.addEventListener('change', runtime.timezoneLabelInputHandler, true);
             document.__mauticLocaleFixTimezoneLabelPatched = true;
+        }
+
+        if (allowInactiveCampaignScheduleEdit && !runtime.inactiveCampaignScheduleChangeHandler) {
+            runtime.inactiveCampaignScheduleChangeHandler = function (event) {
+                var input = event.target;
+                if (!input || !input.matches || !input.matches('input[name$="[isPublished]"]')) {
+                    return;
+                }
+
+                window.setTimeout(allowInactiveCampaignScheduleInputs, 0);
+            };
+            document.addEventListener('change', runtime.inactiveCampaignScheduleChangeHandler, true);
         }
 
         if ('MutationObserver' in window) {

@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.44';
+    private const ASSET_VERSION = '1.0.45';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -32,6 +32,16 @@ class AssetSubscriber implements EventSubscriberInterface
 
     public function injectAssets(CustomAssetsEvent $event): void
     {
+        // Mautic's direct integration settings route can omit its global JS
+        // facade in 7.2. Load this plugin-scoped fallback even while the
+        // integration is unpublished so its own controls remain operable.
+        $event->addScript(
+            'plugins/MauticLocaleFixBundle/Assets/runtime/settings-toggle-compat.js?v='.self::ASSET_VERSION,
+            'bodyClose',
+            false,
+            'mauticlocalefix-settings-toggle-compat'
+        );
+
         $integration = $this->getIntegration();
         if (!$integration instanceof MauticLocaleFixIntegration) {
             $event->addScriptDeclaration($this->getLegacyCleanupScript(), 'bodyClose');
@@ -58,6 +68,7 @@ class AssetSubscriber implements EventSubscriberInterface
             'timeDisplayFormat'         => $integration->getTimeDisplayFormat(),
             'mauticTimezone'            => $this->getMauticTimezone(),
             'timezoneLabelMode'         => $integration->getTimezoneLabelMode(),
+            'allowInactiveCampaignScheduleEdit' => $integration->isInactiveCampaignScheduleEditAllowed(),
             'gmailImageProxyOpen'       => $gmailImageProxyOpen,
         ];
 
@@ -121,6 +132,11 @@ class AssetSubscriber implements EventSubscriberInterface
         }
     }
     document.__mauticLocaleFixTimezoneLabelPatched = false;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-mautic-locale-fix-inactive-schedule-edit="1"]'), function (input) {
+        input.disabled = true;
+        input.setAttribute('disabled', 'disabled');
+        input.removeAttribute('data-mautic-locale-fix-inactive-schedule-edit');
+    });
     Array.prototype.forEach.call(document.querySelectorAll('.mautic-locale-fix-timezone-label'), function (badge) {
         badge.remove();
     });

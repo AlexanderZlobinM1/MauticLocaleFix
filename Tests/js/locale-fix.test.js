@@ -16,6 +16,7 @@ function createInput(value, options = {}) {
         id: options.id || '',
         name: options.name || '',
         parentElement: options.parentElement || null,
+        disabled: options.disabled === true,
     getAttribute(name) {
       return Object.prototype.hasOwnProperty.call(attrs, name) ? attrs[name] : null;
     },
@@ -1068,6 +1069,51 @@ function testDateRangeInitialValuesAreLocalizedButSubmitStaysNative() {
   assert.strictEqual(toInput.value, 'Июл 3, 2026');
 }
 
+function testInactiveCampaignScheduleEditIsExplicitAndReversible() {
+  const input = createInput('2026-09-02 21:35', {
+    id: 'campaign_publishUp',
+    name: 'campaign[publishUp]',
+    disabled: true,
+  });
+  createInputGroup(input);
+
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    timezoneLabelMode: 'hidden',
+    allowInactiveCampaignScheduleEdit: true,
+  }, {
+    input,
+    querySelectorAll(selector) {
+      return selector.indexOf('[publishUp]') !== -1 ? [input] : [];
+    },
+  });
+
+  assert.strictEqual(input.disabled, false);
+  assert.strictEqual(input.getAttribute('data-mautic-locale-fix-inactive-schedule-edit'), '1');
+
+  const standardInput = createInput('2026-09-02 21:35', {
+    id: 'campaign_publishUp',
+    name: 'campaign[publishUp]',
+    disabled: true,
+  });
+  createInputGroup(standardInput);
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    timezoneLabelMode: 'hidden',
+    allowInactiveCampaignScheduleEdit: false,
+  }, {
+    input: standardInput,
+    querySelectorAll(selector) {
+      return selector.indexOf('[publishUp]') !== -1 ? [standardInput] : [];
+    },
+  });
+
+  assert.strictEqual(standardInput.disabled, true);
+  assert.strictEqual(standardInput.getAttribute('data-mautic-locale-fix-inactive-schedule-edit'), null);
+}
+
 function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
   const input = createInput('2026-07-15 12:00', {
     id: 'campaign_publishUp',
@@ -1231,6 +1277,7 @@ testExistingChartTicksAreFormattedWithoutMutatingLabels();
 testChartDateLabelsUseLocaleWithoutMutatingLabelsOrRedrawing();
 testNativeTimeFormattingLeavesChartsUntouched();
 testDateRangeInitialValuesAreLocalizedButSubmitStaysNative();
+testInactiveCampaignScheduleEditIsExplicitAndReversible();
 testTimezoneOffsetLabelUsesScheduledDateDstOffset();
 testTimezoneLabelUsesTheDisplayedUsersTimezoneForTheSameInstant();
 testTimezoneShortNameUsesInternationalAbbreviation();

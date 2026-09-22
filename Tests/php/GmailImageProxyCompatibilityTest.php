@@ -61,6 +61,7 @@ namespace {
         'calendar_date_format' => 'iso',
         'time_display_format' => '24h',
         'timezone_label_mode' => 'short',
+        'allow_inactive_campaign_schedule_edit' => 'enabled',
     ];
     $integration->setKeys($saved);
     $builder = new class {
@@ -72,7 +73,7 @@ namespace {
     };
     $integration->appendToForm($builder, $saved, 'keys');
     $check(isset($builder->fields['gmail_image_proxy_open']) === $expected, 'Google switch visibility');
-    foreach (['calendar_enabled', 'calendar_week_start', 'calendar_date_format', 'time_display_format', 'timezone_label_mode'] as $field) {
+    foreach (['calendar_enabled', 'calendar_week_start', 'calendar_date_format', 'time_display_format', 'timezone_label_mode', 'allow_inactive_campaign_schedule_edit'] as $field) {
         $check(isset($builder->fields[$field]), 'Independent field remains: '.$field);
     }
     $check($integration->isCalendarFixEnabled(), 'Calendar remains enabled');
@@ -80,6 +81,7 @@ namespace {
     $check('iso' === $integration->getCalendarDateFormat(), 'Date format retained');
     $check('24h' === $integration->getTimeDisplayFormat(), 'Time format retained');
     $check('short' === $integration->getTimezoneLabelMode(), 'Timezone label mode retained');
+    $check($integration->isInactiveCampaignScheduleEditAllowed(), 'Inactive campaign schedule edit retained');
     $check(['regional_settings'] === $integration->getSupportedFeatures(), 'Regional feature remains');
     $check($expected === $integration->isGmailImageProxyOpenEnabled(), 'Saved enabled key respects version');
     $config = require dirname(__DIR__, 2).'/Config/config.php';
