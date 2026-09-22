@@ -5,13 +5,13 @@ Last reviewed: 23 September 2026.
 Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`); preceding
 release `1.0.44` is `8961bcb`. Release `1.0.45` adds an opt-in
 inactive-campaign schedule editor; its default
-preserves Mautic's disabled date/time inputs. Local browser regression and PHP
-form/config checks pass on the Mautic 6.0.9 and 7.2.0 dependency trees. The
-operator manually accepted the campaign editor UI checks on Bigartmail. The
+preserves Mautic's disabled date/time inputs. Local PHP and JavaScript regression
+checks pass on Mautic 6.0.9 and 7.2.0 dependency trees. The operator manually
+accepted the campaign editor UI checks on Bigartmail. The
 Operations database-only check passed on the installed 1.0.45 tree: changing
-only user 1's timezone from UTC to Europe/Belgrade left campaign 7's stored
-`publish_up=2026-04-17 05:00:00` and `publish_down=NULL` unchanged; timezone was
-restored to UTC and the final database values matched baseline. This evidence
+only the user's timezone from UTC to Europe/Belgrade left stored activation
+and deactivation timestamps unchanged; timezone was restored to UTC and the
+final database values matched baseline. This evidence
 does not identify the installed tree as local candidate R6: the installed
 `AssetSubscriber.php` and `settings-toggle-compat.js` hashes differed from the
 R6 archive, SHA-256
