@@ -2,7 +2,7 @@
 
 Last reviewed: 22 September 2026.
 
-Current published release: `1.0.44` (publication ref recorded below). It fixes the
+Current published release: `1.0.44` (`7933b63`, tag `v1.0.44`). It fixes the
 timezone-label source: the active Mautic user timezone is used, then the system
 default only when the profile has none. Focused browser regression and PHP
 form/config checks passed on the Mautic 6.0.9 and 7.2.0 dependency trees.
