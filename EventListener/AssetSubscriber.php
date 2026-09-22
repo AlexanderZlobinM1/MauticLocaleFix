@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.43';
+    private const ASSET_VERSION = '1.0.44';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -194,7 +194,14 @@ JS;
 
     private function getMauticTimezone(): string
     {
-        $timezone = trim((string) $this->coreParametersHelper->get('default_timezone', ''));
+        $user     = $this->userHelper->getUser(true);
+        $timezone = null !== $user && method_exists($user, 'getTimezone')
+            ? trim((string) $user->getTimezone())
+            : '';
+
+        if ('' === $timezone) {
+            $timezone = trim((string) $this->coreParametersHelper->get('default_timezone', ''));
+        }
 
         return '' !== $timezone ? $timezone : trim((string) date_default_timezone_get());
     }

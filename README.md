@@ -87,8 +87,9 @@ This plugin intentionally does not change global timezone settings or Mautic
 core files. It controls the first day of the week, the calendar popup language,
 selected date-only display formats, chart date localization, and selected
 timestamp table and chart time formats, and optional timezone labels for
-scheduled campaign fields. Campaign date/time values remain Mautic's own user
-and system timezone values. The Gmail image proxy workaround requires the
+scheduled campaign fields. The label always uses the active Mautic user's
+timezone (or the system default when the profile has none), so it describes the
+same stored instant as Mautic's date/time value after a user timezone change. The Gmail image proxy workaround requires the
 integration to be published and its dedicated setting enabled. It is limited to
 email tracking pixel requests and does not disable global bot filtering for page
 hits, assets, prefetch, DNT, or Sec-GPC requests.

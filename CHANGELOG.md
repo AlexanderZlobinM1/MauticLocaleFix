@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.44 — 2026-09-22
+
+- Resolve scheduled-field timezone labels from the active Mautic user's timezone,
+  falling back to the system default only when the profile has no timezone.
+- Preserve the stored instant and Mautic's own user-local date/time value: changing
+  the user timezone changes both the visual value and its matching inline suffix.
+
 ## 1.0.43 — 2026-09-22
 
 - Add one operator-controlled timezone-label format for campaign

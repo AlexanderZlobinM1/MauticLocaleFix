@@ -1099,6 +1099,47 @@ function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
   assert.strictEqual(input.value, '2026-07-15 12:00');
 }
 
+function testTimezoneLabelUsesTheDisplayedUsersTimezoneForTheSameInstant() {
+  const moscowInput = createInput('2026-04-17 07:00', {
+    id: 'campaign_publishUp',
+    name: 'campaign[publishUp]',
+  });
+  const moscowControl = createInputGroup(moscowInput);
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    timezoneLabelMode: 'offset',
+    mauticTimezone: 'Europe/Moscow',
+  }, {
+    input: moscowInput,
+    querySelectorAll(selector) {
+      return selector.indexOf('[publishUp]') !== -1 ? [moscowInput] : [];
+    },
+  });
+
+  const cestInput = createInput('2026-04-17 06:00', {
+    id: 'campaign_publishUp',
+    name: 'campaign[publishUp]',
+  });
+  const cestControl = createInputGroup(cestInput);
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    timezoneLabelMode: 'offset',
+    mauticTimezone: 'Europe/Belgrade',
+  }, {
+    input: cestInput,
+    querySelectorAll(selector) {
+      return selector.indexOf('[publishUp]') !== -1 ? [cestInput] : [];
+    },
+  });
+
+  assert.strictEqual(moscowControl.children[1].textContent, ' (UTC+03:00)');
+  assert.strictEqual(cestControl.children[1].textContent, ' (UTC+02:00)');
+  assert.strictEqual(moscowInput.value, '2026-04-17 07:00');
+  assert.strictEqual(cestInput.value, '2026-04-17 06:00');
+}
+
 function testTimezoneShortNameUsesInternationalAbbreviation() {
   const input = createInput('2026-04-17 08:00', {
     id: 'campaign_publishUp',
@@ -1191,6 +1232,7 @@ testChartDateLabelsUseLocaleWithoutMutatingLabelsOrRedrawing();
 testNativeTimeFormattingLeavesChartsUntouched();
 testDateRangeInitialValuesAreLocalizedButSubmitStaysNative();
 testTimezoneOffsetLabelUsesScheduledDateDstOffset();
+testTimezoneLabelUsesTheDisplayedUsersTimezoneForTheSameInstant();
 testTimezoneShortNameUsesInternationalAbbreviation();
 testTimezoneShortNameAndHiddenMode();
 
