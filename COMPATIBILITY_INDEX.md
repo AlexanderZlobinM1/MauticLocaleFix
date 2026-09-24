@@ -4,9 +4,10 @@ Last reviewed: 25 September 2026.
 
 Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`). Canonical main has
 the untagged `1.0.46` candidate (`7c67c3c`); screenshots showed the outer wrapper
-and its `1.0.47` correction both damaged the layout. Local `1.0.48` keeps the
-timezone label inline at every width, compacting only its typography and spacing
-on narrow controls. Visual acceptance is pending. Preceding
+and its `1.0.47` correction both damaged the layout. The untagged `1.0.48` fix
+(`c01367d`) is now on main. It keeps the timezone label inline at every width,
+compacting only its typography and spacing on narrow controls. Visual acceptance
+is pending. Compatibility marks remain tied to 1.0.45. Preceding
 release `1.0.44` is `8961bcb`. Release `1.0.45` adds an opt-in
 inactive-campaign schedule editor; its default
 preserves Mautic's disabled date/time inputs. Local PHP and JavaScript regression
