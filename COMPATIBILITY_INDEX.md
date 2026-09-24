@@ -6,7 +6,8 @@ Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`). Canonical main h
 the untagged `1.0.46` candidate (`7c67c3c`); the operator reported that its outer
 wrapper broke both wide and narrow field layouts. Local `1.0.47` replaces that
 wrapper with a width-triggered compact style on the input group only; visual
-acceptance is still pending. Preceding
+acceptance is still pending. It is now pushed on main at `fee2eb7` and remains
+untagged. Preceding
 release `1.0.44` is `8961bcb`. Release `1.0.45` adds an opt-in
 inactive-campaign schedule editor; its default
 preserves Mautic's disabled date/time inputs. Local PHP and JavaScript regression
