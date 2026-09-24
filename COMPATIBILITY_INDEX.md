@@ -1,8 +1,10 @@
 # Compatibility index
 
-Last reviewed: 23 September 2026.
+Last reviewed: 24 September 2026.
 
-Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`); preceding
+Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`). Canonical main now has
+the untagged `1.0.46` candidate (`7c67c3c`), pushed on 24 September; its narrow-field
+layout still needs visual acceptance on Mautic 7.2 before release. Preceding
 release `1.0.44` is `8961bcb`. Release `1.0.45` adds an opt-in
 inactive-campaign schedule editor; its default
 preserves Mautic's disabled date/time inputs. Local PHP and JavaScript regression
@@ -44,4 +46,4 @@ exact-artifact DB acceptance for local R6. No schema or migration is included.
 The Mautic 7 image-proxy switch and Mautic 6 disabled path retain regression coverage. Update this file and the workspace `../../COMPATIBILITY_INDEX.md` row with every plugin-related change or review.
 
 
-Local candidate note (24 September 2026): candidate 1.0.46 preserves the current inline layout when a control wrapper is wider than 420px and moves timezone labels below controls only at or below 420px. The JavaScript regression suite passes; visual acceptance on Mautic 7.2 is pending. This is not published compatibility evidence and does not change the release/ref above.
+Candidate note (24 September 2026): `1.0.46` preserves the inline layout when a control wrapper is wider than 420px and moves timezone labels below controls only at or below 420px. The JavaScript regression suite passes; visual acceptance on Mautic 7.2 is pending. This is not yet published release compatibility evidence.
