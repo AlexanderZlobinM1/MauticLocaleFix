@@ -7,6 +7,10 @@ const source = fs.readFileSync(
   path.join(__dirname, '../../Assets/runtime/locale-fix.js'),
   'utf8'
 );
+const timezoneLabelStyles = fs.readFileSync(
+  path.join(__dirname, '../../Assets/css/timezone-label.css'),
+  'utf8'
+);
 
 function createInput(value, options = {}) {
     const attrs = Object.assign({}, options.attrs || {});
@@ -50,9 +54,33 @@ function createInputGroup(input) {
         children.splice(index, 0, child);
       }
     },
+    appendChild(child) {
+      child.parentNode = group;
+      child.parentElement = group;
+      const previous = children.indexOf(child);
+      if (previous !== -1) children.splice(previous, 1);
+      children.push(child);
+    },
   };
 
   input.parentElement = group;
+  const outerChildren = [group];
+  const outer = {
+    children: outerChildren,
+    insertBefore(child, reference) {
+      const index = reference ? outerChildren.indexOf(reference) : -1;
+      child.parentNode = outer;
+      child.parentElement = outer;
+      if (child === group) {
+        const oldIndex = outerChildren.indexOf(group);
+        if (oldIndex !== -1) outerChildren.splice(oldIndex, 1);
+      }
+      outerChildren.splice(index < 0 ? outerChildren.length : index, 0, child);
+    },
+  };
+  group.parentElement = outer;
+  group.parentNode = outer;
+  group.outer = outer;
   Object.defineProperty(input, 'nextSibling', {
     get() {
       const index = children.indexOf(input);
@@ -174,8 +202,30 @@ function runPlugin(config, options = {}) {
     },
     removeEventListener() {},
     createElement() {
-      return {
+      const element = {
+        children: [],
         className: '',
+        classList: {
+          contains(name) {
+            return String(element.className || '').split(/\s+/).indexOf(name) !== -1;
+          },
+        },
+        appendChild(child) {
+          const oldParent = child.parentNode;
+          if (oldParent && oldParent.children) {
+            const index = oldParent.children.indexOf(child);
+            if (index !== -1) oldParent.children.splice(index, 1);
+          }
+          child.parentNode = this;
+          child.parentElement = this;
+          this.children.push(child);
+        },
+        insertBefore(child, reference) {
+          child.parentNode = this;
+          child.parentElement = this;
+          const index = reference ? this.children.indexOf(reference) : -1;
+          this.children.splice(index < 0 ? this.children.length : index, 0, child);
+        },
         setAttribute() {},
         remove() {
           if (this.parentNode) {
@@ -183,9 +233,12 @@ function runPlugin(config, options = {}) {
             if (index !== -1) {
               this.parentNode.children.splice(index, 1);
             }
+            this.parentNode = null;
+            this.parentElement = null;
           }
         },
       };
+      return element;
     },
   };
   const window = {
@@ -1119,7 +1172,8 @@ function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
     id: 'campaign_publishUp',
     name: 'campaign[publishUp]',
   });
-  const control = createInputGroup(input);
+  const group = createInputGroup(input);
+  const outer = group.outer;
   const label = createLabel();
 
   runPlugin({
@@ -1138,10 +1192,15 @@ function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
   });
 
   assert.strictEqual(label.children.length, 0);
-  assert.strictEqual(control.children.length, 2);
-  assert.strictEqual(control.children[0], input);
-  assert.strictEqual(control.children[1].textContent, ' (UTC+02:00)');
-  assert.ok(control.children[1].className.indexOf('input-group-addon') !== -1);
+  const timezoneControl = outer.children[0];
+  assert.ok(timezoneControl.className.indexOf('mautic-locale-fix-timezone-control') !== -1);
+  assert.strictEqual(timezoneControl.children[0], group);
+  assert.strictEqual(group.children[0], input);
+  assert.strictEqual(timezoneControl.children[1].textContent, ' (UTC+02:00)');
+  assert.ok(timezoneControl.children[1].className.indexOf('input-group-addon') !== -1);
+  assert.ok(timezoneLabelStyles.indexOf('flex-direction: row') !== -1);
+  assert.ok(timezoneLabelStyles.indexOf('@container (max-width: 420px)') !== -1);
+  assert.ok(timezoneLabelStyles.indexOf('flex-direction: column') !== -1);
   assert.strictEqual(input.value, '2026-07-15 12:00');
 }
 
@@ -1180,8 +1239,8 @@ function testTimezoneLabelUsesTheDisplayedUsersTimezoneForTheSameInstant() {
     },
   });
 
-  assert.strictEqual(moscowControl.children[1].textContent, ' (UTC+03:00)');
-  assert.strictEqual(cestControl.children[1].textContent, ' (UTC+02:00)');
+  assert.strictEqual(moscowControl.outer.children[0].children[1].textContent, ' (UTC+03:00)');
+  assert.strictEqual(cestControl.outer.children[0].children[1].textContent, ' (UTC+02:00)');
   assert.strictEqual(moscowInput.value, '2026-04-17 07:00');
   assert.strictEqual(cestInput.value, '2026-04-17 06:00');
 }
@@ -1205,7 +1264,7 @@ function testTimezoneShortNameUsesInternationalAbbreviation() {
     },
   });
 
-  assert.strictEqual(control.children[1].textContent, ' (MSK)');
+  assert.strictEqual(control.outer.children[0].children[1].textContent, ' (MSK)');
   assert.strictEqual(input.value, '2026-04-17 08:00');
 }
 
@@ -1229,8 +1288,8 @@ function testTimezoneShortNameAndHiddenMode() {
     mauticTimezone: 'Europe/Belgrade',
   }, options);
 
-  assert.strictEqual(control.children.length, 2);
-  assert.strictEqual(control.children[1].textContent, ' (CET)');
+  assert.strictEqual(control.outer.children[0].children.length, 2);
+  assert.strictEqual(control.outer.children[0].children[1].textContent, ' (CET)');
 
   const hiddenInput = createInput('2026-01-15 12:00', {
     id: 'campaign_publishDown',
@@ -1249,7 +1308,8 @@ function testTimezoneShortNameAndHiddenMode() {
     },
   }));
 
-  assert.strictEqual(hiddenControl.children.length, 1);
+  assert.strictEqual(hiddenControl.outer.children.length, 1);
+  assert.strictEqual(hiddenControl.outer.children[0], hiddenControl);
   assert.strictEqual(hiddenInput.value, '2026-01-15 12:00');
 }
 

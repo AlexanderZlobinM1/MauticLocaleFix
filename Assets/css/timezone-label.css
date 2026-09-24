@@ -1,0 +1,62 @@
+.mautic-locale-fix-timezone-control {
+    container-type: inline-size;
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: row;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.mautic-locale-fix-timezone-control > .input-group,
+.mautic-locale-fix-timezone-control > input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+}
+
+.mautic-locale-fix-timezone-control > .input-group .form-control {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.mautic-locale-fix-timezone-control > input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.mautic-locale-fix-timezone-label {
+    align-items: center;
+    border-left: 0;
+    display: flex;
+    flex: 0 0 auto;
+    border-radius: 0 4px 4px 0;
+    white-space: nowrap;
+}
+
+@container (max-width: 420px) {
+    .mautic-locale-fix-timezone-control {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .mautic-locale-fix-timezone-control > .input-group,
+    .mautic-locale-fix-timezone-control > input {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    .mautic-locale-fix-timezone-control > .input-group .form-control {
+        border-radius: 4px;
+    }
+
+    .mautic-locale-fix-timezone-control > input {
+        border-radius: 4px;
+    }
+
+    .mautic-locale-fix-timezone-label {
+        align-self: flex-end;
+        border-left: 1px solid #ccc;
+        border-radius: 4px;
+        margin-top: 2px;
+    }
+}

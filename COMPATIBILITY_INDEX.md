@@ -42,3 +42,6 @@ timezone-only DB check on the installed 1.0.45 tree. This does not constitute
 exact-artifact DB acceptance for local R6. No schema or migration is included.
 
 The Mautic 7 image-proxy switch and Mautic 6 disabled path retain regression coverage. Update this file and the workspace `../../COMPATIBILITY_INDEX.md` row with every plugin-related change or review.
+
+
+Local candidate note (24 September 2026): candidate 1.0.46 preserves the current inline layout when a control wrapper is wider than 420px and moves timezone labels below controls only at or below 420px. The JavaScript regression suite passes; visual acceptance on Mautic 7.2 is pending. This is not published compatibility evidence and does not change the release/ref above.

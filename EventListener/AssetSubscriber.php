@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.45';
+    private const ASSET_VERSION = '1.0.46';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -78,6 +78,7 @@ class AssetSubscriber implements EventSubscriberInterface
                 JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
             ).';'
         );
+        $event->addStylesheet('plugins/MauticLocaleFixBundle/Assets/css/timezone-label.css?v='.self::ASSET_VERSION);
         $event->addScript(
             'plugins/MauticLocaleFixBundle/Assets/runtime/locale-fix.js?v='.self::ASSET_VERSION,
             'bodyClose',
@@ -139,6 +140,13 @@ class AssetSubscriber implements EventSubscriberInterface
     });
     Array.prototype.forEach.call(document.querySelectorAll('.mautic-locale-fix-timezone-label'), function (badge) {
         badge.remove();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.mautic-locale-fix-timezone-control'), function (wrapper) {
+        var parent = wrapper.parentNode;
+        if (parent && typeof parent.insertBefore === 'function' && wrapper.children && wrapper.children.length === 1) {
+            parent.insertBefore(wrapper.children[0], wrapper);
+            wrapper.remove();
+        }
     });
     if ($ && $.fn && $.fn.datetimepicker && $.fn.datetimepicker.__mauticLocaleFixOriginal) {
         $.fn.datetimepicker = $.fn.datetimepicker.__mauticLocaleFixOriginal;

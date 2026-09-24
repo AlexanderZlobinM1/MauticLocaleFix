@@ -594,7 +594,14 @@
 
     function badgeForScheduledDateTimeInput(input) {
         var parent = input && input.parentElement;
-        var children = parent && parent.children ? parent.children : [];
+        var wrapper;
+        var children;
+
+        while (parent && !hasClass(parent, 'mautic-locale-fix-timezone-control')) {
+            parent = parent.parentElement;
+        }
+        wrapper = parent;
+        children = wrapper && wrapper.children ? wrapper.children : [];
 
         for (var i = 0; i < children.length; i += 1) {
             if (children[i] && children[i].className && String(children[i].className).indexOf('mautic-locale-fix-timezone-label') !== -1) {
@@ -607,50 +614,63 @@
 
     function removeTimezoneLabel(input) {
         var badge = badgeForScheduledDateTimeInput(input);
+        var wrapper;
+
         if (badge && typeof badge.remove === 'function') {
+            wrapper = badge.parentElement;
             badge.remove();
+            if (hasClass(wrapper, 'mautic-locale-fix-timezone-control') && wrapper.children && wrapper.children.length === 1 && wrapper.parentNode && typeof wrapper.parentNode.insertBefore === 'function') {
+                wrapper.parentNode.insertBefore(wrapper.children[0], wrapper);
+                if (typeof wrapper.remove === 'function') {
+                    wrapper.remove();
+                }
+            }
         }
     }
 
-    function timezoneControlGroup(input) {
+    function timezoneControlWrapper(input) {
         var parent = input && input.parentElement;
-        var group;
+        var wrapper;
+        var control;
 
         if (!parent) {
             return null;
         }
 
-        if (hasClass(parent, 'input-group')) {
+        while (parent && !hasClass(parent, 'mautic-locale-fix-timezone-control')) {
+            parent = parent.parentElement;
+        }
+        if (parent) {
             return parent;
         }
 
-        if (!document.createElement || typeof parent.insertBefore !== 'function') {
+        control = hasClass(input.parentElement, 'input-group') ? input.parentElement : input;
+        parent = control.parentElement;
+
+        if (!document.createElement || !parent || typeof parent.insertBefore !== 'function') {
             return null;
         }
 
-        group = document.createElement('div');
-        group.className = 'input-group mautic-locale-fix-timezone-control';
-        if (group.style) {
-            group.style.width = '100%';
-        }
-        if (typeof group.appendChild !== 'function') {
+        wrapper = document.createElement('div');
+        wrapper.className = 'mautic-locale-fix-timezone-control';
+        if (typeof wrapper.appendChild !== 'function') {
             return null;
         }
 
-        parent.insertBefore(group, input);
-        group.appendChild(input);
+        parent.insertBefore(wrapper, control);
+        wrapper.appendChild(control);
 
-        return group;
+        return wrapper;
     }
 
     function insertTimezoneLabel(input, badge) {
-        var group = timezoneControlGroup(input);
+        var wrapper = timezoneControlWrapper(input);
 
-        if (!group || typeof group.insertBefore !== 'function') {
+        if (!wrapper || typeof wrapper.appendChild !== 'function') {
             return false;
         }
 
-        group.insertBefore(badge, input.nextSibling || null);
+        wrapper.appendChild(badge);
 
         return true;
     }
@@ -701,10 +721,8 @@
     }
 
     function removeTimezoneLabels() {
-        Array.prototype.forEach.call(queryAll('.mautic-locale-fix-timezone-label'), function (badge) {
-            if (badge && typeof badge.remove === 'function') {
-                badge.remove();
-            }
+        Array.prototype.forEach.call(queryAll(scheduledDateTimeSelector), function (input) {
+            removeTimezoneLabel(input);
         });
     }
 

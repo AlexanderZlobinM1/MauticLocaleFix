@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.46 — 2026-09-24
+
+- Preserve the inline timezone label on wide scheduled date/time controls and
+  move it below the native field in narrow or multi-column forms, preventing
+  the time value from being clipped.
+
 ## 1.0.45 — 2026-09-23
 
 - Add an opt-in setting that permits editing campaign activation and deactivation
