@@ -1,13 +1,12 @@
 # Compatibility index
 
-Last reviewed: 24 September 2026.
+Last reviewed: 25 September 2026.
 
 Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`). Canonical main has
-the untagged `1.0.46` candidate (`7c67c3c`); the operator reported that its outer
-wrapper broke both wide and narrow field layouts. Local `1.0.47` replaces that
-wrapper with a width-triggered compact style on the input group only; visual
-acceptance is still pending. It is now pushed on main at `fee2eb7` and remains
-untagged. Preceding
+the untagged `1.0.46` candidate (`7c67c3c`); screenshots showed the outer wrapper
+and its `1.0.47` correction both damaged the layout. Local `1.0.48` keeps the
+timezone label inline at every width, compacting only its typography and spacing
+on narrow controls. Visual acceptance is pending. Preceding
 release `1.0.44` is `8961bcb`. Release `1.0.45` adds an opt-in
 inactive-campaign schedule editor; its default
 preserves Mautic's disabled date/time inputs. Local PHP and JavaScript regression
@@ -49,4 +48,4 @@ exact-artifact DB acceptance for local R6. No schema or migration is included.
 The Mautic 7 image-proxy switch and Mautic 6 disabled path retain regression coverage. Update this file and the workspace `../../COMPATIBILITY_INDEX.md` row with every plugin-related change or review.
 
 
-Candidate note (24 September 2026): `1.0.47` leaves wide input groups and their surrounding layout untouched. At widths of 420px or less, it adds a compact-only class to the input group, keeps datepicker addons in the field row and wraps only the timezone label below. The JavaScript regression suite passes; visual acceptance on Mautic 7.2 is pending. This is not yet published release compatibility evidence.
+Candidate note (25 September 2026): `1.0.48` leaves wide controls untouched and keeps the timezone label on the same line at narrow widths, reducing its font and padding and slightly tightening the field. The JavaScript regression suite passes; visual acceptance on Mautic 7.2 is pending. This is not yet published release compatibility evidence.

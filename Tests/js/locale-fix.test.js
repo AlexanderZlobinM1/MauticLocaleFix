@@ -1258,8 +1258,9 @@ function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
   assert.ok(narrowGroup.classList.contains('mautic-locale-fix-timezone-control--narrow'));
   assert.strictEqual(narrowGroup.children[0], narrowInput);
   assert.strictEqual(narrowGroup.children[1].textContent, ' (UTC+02:00)');
-  assert.ok(timezoneLabelStyles.indexOf('flex-flow: row wrap') !== -1);
-  assert.ok(timezoneLabelStyles.indexOf('flex: 0 0 100%') !== -1);
+  assert.ok(timezoneLabelStyles.indexOf('flex-flow: row nowrap') !== -1);
+  assert.ok(timezoneLabelStyles.indexOf('font-size: 11px') !== -1);
+  assert.ok(timezoneLabelStyles.indexOf('padding: 4px 5px') !== -1);
   narrowRuntime.resize(narrowGroup, 500);
   assert.ok(!narrowGroup.classList.contains('mautic-locale-fix-timezone-control--narrow'));
   narrowRuntime.resize(narrowGroup, 230);

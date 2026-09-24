@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.48 — 2026-09-25
+
+- Keep timezone labels on the same line at every field width. On narrow fields,
+  reduce only the field and timezone-label typography and spacing so the native
+  time value remains visible beside the offset.
+
 ## 1.0.47 — 2026-09-24
 
 - Keep Mautic's original input-group structure and inline appearance on wide
