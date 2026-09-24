@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.47 — 2026-09-24
+
+- Keep Mautic's original input-group structure and inline appearance on wide
+  fields; stack the timezone label only when that specific control is 420px wide
+  or narrower, including when the form is resized.
+
 ## 1.0.46 — 2026-09-24
 
 - Preserve the inline timezone label on wide scheduled date/time controls and

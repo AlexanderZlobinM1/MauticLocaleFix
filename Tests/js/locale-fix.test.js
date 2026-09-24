@@ -40,9 +40,22 @@ function createInputGroup(input) {
   const children = [input];
   const group = {
     children,
+    className: 'input-group',
     classList: {
       contains(name) {
-        return name === 'input-group';
+        return String(group.className || '').split(/\s+/).indexOf(name) !== -1;
+      },
+      toggle(name, force) {
+        const classes = String(group.className || '').split(/\s+/).filter(Boolean);
+        const has = classes.indexOf(name) !== -1;
+        const shouldHave = force === undefined ? !has : force;
+        if (shouldHave && !has) classes.push(name);
+        if (!shouldHave && has) classes.splice(classes.indexOf(name), 1);
+        group.className = classes.join(' ');
+        return shouldHave;
+      },
+      remove(name) {
+        group.className = String(group.className || '').split(/\s+/).filter((item) => item && item !== name).join(' ');
       },
     },
     insertBefore(child, reference) {
@@ -55,11 +68,18 @@ function createInputGroup(input) {
       }
     },
     appendChild(child) {
+      if (child.parentNode && child.parentNode.children) {
+        const oldIndex = child.parentNode.children.indexOf(child);
+        if (oldIndex !== -1) child.parentNode.children.splice(oldIndex, 1);
+      }
       child.parentNode = group;
       child.parentElement = group;
       const previous = children.indexOf(child);
       if (previous !== -1) children.splice(previous, 1);
       children.push(child);
+    },
+    getBoundingClientRect() {
+      return {width: input.timezoneControlWidth || 500};
     },
   };
 
@@ -155,6 +175,7 @@ function runPlugin(config, options = {}) {
   const timeouts = [];
   const submitListeners = [];
   const intervals = [];
+  const resizeObservers = [];
   const input = options.input || createInput('2026-06-29 15:00');
   const form = {
     querySelector(selector) {
@@ -264,6 +285,17 @@ function runPlugin(config, options = {}) {
     },
     mQuery: options.query,
     Chart: options.Chart,
+    ResizeObserver: class {
+      constructor(callback) {
+        this.callback = callback;
+        this.targets = [];
+        resizeObservers.push(this);
+      }
+      observe(target) {
+        this.targets.push(target);
+      }
+      disconnect() {}
+    },
   };
 
   const context = {
@@ -295,6 +327,13 @@ function runPlugin(config, options = {}) {
       intervals.forEach((interval) => {
         if (interval.active) {
           interval.callback();
+        }
+      });
+    },
+    resize(target, width) {
+      resizeObservers.forEach((observer) => {
+        if (observer.targets.indexOf(target) !== -1) {
+          observer.callback([{target, contentRect: {width}}]);
         }
       });
     },
@@ -1192,16 +1231,72 @@ function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
   });
 
   assert.strictEqual(label.children.length, 0);
-  const timezoneControl = outer.children[0];
-  assert.ok(timezoneControl.className.indexOf('mautic-locale-fix-timezone-control') !== -1);
-  assert.strictEqual(timezoneControl.children[0], group);
+  assert.strictEqual(outer.children[0], group);
   assert.strictEqual(group.children[0], input);
-  assert.strictEqual(timezoneControl.children[1].textContent, ' (UTC+02:00)');
-  assert.ok(timezoneControl.children[1].className.indexOf('input-group-addon') !== -1);
-  assert.ok(timezoneLabelStyles.indexOf('flex-direction: row') !== -1);
-  assert.ok(timezoneLabelStyles.indexOf('@container (max-width: 420px)') !== -1);
-  assert.ok(timezoneLabelStyles.indexOf('flex-direction: column') !== -1);
+  assert.strictEqual(group.children[1].textContent, ' (UTC+02:00)');
+  assert.ok(group.children[1].className.indexOf('input-group-addon') !== -1);
+  assert.ok(!group.classList.contains('mautic-locale-fix-timezone-control--narrow'));
+  assert.ok(timezoneLabelStyles.indexOf('.input-group.mautic-locale-fix-timezone-control--narrow') !== -1);
+
+  const narrowInput = createInput('2026-07-15 12:00', {
+    id: 'campaign_publishUp',
+    name: 'campaign[publishUp]',
+  });
+  narrowInput.timezoneControlWidth = 230;
+  const narrowGroup = createInputGroup(narrowInput);
+  const narrowRuntime = runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    timezoneLabelMode: 'offset',
+    mauticTimezone: 'Europe/Belgrade',
+  }, {
+    input: narrowInput,
+    querySelectorAll(selector) {
+      return selector.indexOf('[publishUp]') !== -1 ? [narrowInput] : [];
+    },
+  });
+  assert.ok(narrowGroup.classList.contains('mautic-locale-fix-timezone-control--narrow'));
+  assert.strictEqual(narrowGroup.children[0], narrowInput);
+  assert.strictEqual(narrowGroup.children[1].textContent, ' (UTC+02:00)');
+  assert.ok(timezoneLabelStyles.indexOf('flex-flow: row wrap') !== -1);
+  assert.ok(timezoneLabelStyles.indexOf('flex: 0 0 100%') !== -1);
+  narrowRuntime.resize(narrowGroup, 500);
+  assert.ok(!narrowGroup.classList.contains('mautic-locale-fix-timezone-control--narrow'));
+  narrowRuntime.resize(narrowGroup, 230);
+  assert.ok(narrowGroup.classList.contains('mautic-locale-fix-timezone-control--narrow'));
   assert.strictEqual(input.value, '2026-07-15 12:00');
+
+  const standaloneInput = createInput('2026-07-15 12:00', {
+    id: 'campaign_publishUp',
+    name: 'campaign[publishUp]',
+  });
+  const datepickerButton = {className: 'btn-datepicker'};
+  const standaloneParent = {
+    children: [datepickerButton, standaloneInput],
+    insertBefore(child, reference) {
+      const index = this.children.indexOf(reference);
+      child.parentNode = this;
+      child.parentElement = this;
+      this.children.splice(index, 0, child);
+    },
+  };
+  standaloneInput.parentNode = standaloneParent;
+  standaloneInput.parentElement = standaloneParent;
+  runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    timezoneLabelMode: 'offset',
+    mauticTimezone: 'Europe/Belgrade',
+  }, {
+    input: standaloneInput,
+    querySelectorAll(selector) {
+      return selector.indexOf('[publishUp]') !== -1 ? [standaloneInput] : [];
+    },
+  });
+  assert.strictEqual(standaloneParent.children[0], datepickerButton);
+  assert.ok(String(standaloneParent.children[1].className).indexOf('mautic-locale-fix-timezone-control') !== -1);
+  assert.strictEqual(standaloneParent.children[1].children[0], standaloneInput);
+  assert.strictEqual(standaloneParent.children[1].children[1].textContent, ' (UTC+02:00)');
 }
 
 function testTimezoneLabelUsesTheDisplayedUsersTimezoneForTheSameInstant() {
@@ -1313,6 +1408,54 @@ function testTimezoneShortNameAndHiddenMode() {
   assert.strictEqual(hiddenInput.value, '2026-01-15 12:00');
 }
 
+function testLegacyOuterTimezoneWrapperIsRemovedWhenPluginIsDisabled() {
+  const input = createInput('2026-07-15 12:00', {
+    id: 'campaign_publishUp',
+    name: 'campaign[publishUp]',
+  });
+  const group = createInputGroup(input);
+  const outer = group.outer;
+  const legacyLabel = {
+    className: 'input-group-addon mautic-locale-fix-timezone-label',
+    parentElement: null,
+    parentNode: null,
+    remove() {
+      const index = this.parentNode.children.indexOf(this);
+      if (index !== -1) this.parentNode.children.splice(index, 1);
+      this.parentElement = null;
+      this.parentNode = null;
+    },
+  };
+  const wrapper = {
+    className: 'mautic-locale-fix-timezone-control',
+    children: [group, legacyLabel],
+    parentNode: outer,
+    parentElement: outer,
+    classList: {contains(name) { return name === 'mautic-locale-fix-timezone-control'; }},
+    remove() {
+      const index = outer.children.indexOf(this);
+      if (index !== -1) outer.children.splice(index, 1);
+    },
+  };
+  legacyLabel.parentNode = wrapper;
+  legacyLabel.parentElement = wrapper;
+  group.parentNode = wrapper;
+  group.parentElement = wrapper;
+  outer.children[0] = wrapper;
+
+  runPlugin({enabled: false, timezoneLabelMode: 'hidden'}, {
+    input,
+    querySelectorAll(selector) {
+      return selector.indexOf('[publishUp]') !== -1 ? [input] : [];
+    },
+  });
+
+  assert.strictEqual(outer.children.length, 1);
+  assert.strictEqual(outer.children[0], group);
+  assert.strictEqual(group.children.length, 1);
+  assert.strictEqual(group.children[0], input);
+}
+
 testDisabledConfigDoesNothing();
 testCampaignSubmitTimezoneWorkaroundIsDisabledEvenIfSaved();
 testCampaignTriggerDateDisplayIsLeftToMauticUserTimezone();
@@ -1342,5 +1485,6 @@ testTimezoneOffsetLabelUsesScheduledDateDstOffset();
 testTimezoneLabelUsesTheDisplayedUsersTimezoneForTheSameInstant();
 testTimezoneShortNameUsesInternationalAbbreviation();
 testTimezoneShortNameAndHiddenMode();
+testLegacyOuterTimezoneWrapperIsRemovedWhenPluginIsDisabled();
 
 console.log('locale-fix tests passed');

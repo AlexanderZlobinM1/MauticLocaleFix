@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.46';
+    private const ASSET_VERSION = '1.0.47';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -140,6 +140,11 @@ class AssetSubscriber implements EventSubscriberInterface
     });
     Array.prototype.forEach.call(document.querySelectorAll('.mautic-locale-fix-timezone-label'), function (badge) {
         badge.remove();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.mautic-locale-fix-timezone-control--narrow'), function (group) {
+        if (group.classList) {
+            group.classList.remove('mautic-locale-fix-timezone-control--narrow');
+        }
     });
     Array.prototype.forEach.call(document.querySelectorAll('.mautic-locale-fix-timezone-control'), function (wrapper) {
         var parent = wrapper.parentNode;
