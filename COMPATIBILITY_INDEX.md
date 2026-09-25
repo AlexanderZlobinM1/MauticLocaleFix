@@ -3,12 +3,12 @@
 Last reviewed: 25 September 2026.
 
 Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`). Canonical main is
-at `1.0.48` (`a9b7177`). A local `1.0.49` candidate keeps wide controls unchanged
+at `1.0.49` (`19d1be1`). keeps wide controls unchanged
 and preserves the native width of narrow time-only controls by placing `UTC` and
 its offset on two lines without parentheses, giving the reclaimed width to the
-time input. The local JavaScript suite
+time input. The JavaScript suite
 passes, and a browser emulation using Mautic 7.2 CSS plus the Campaign event
-form markup confirms that native and labeled screenshot-width controls both
+form markup confirms that native and labeled controls at the same width both
 occupy 248 px. This is visual emulation only; no full Mautic instance or
 Operations acceptance was run. Compatibility marks remain tied to 1.0.45. Preceding
 release `1.0.44` is `8961bcb`. Release `1.0.45` adds an opt-in
@@ -52,9 +52,9 @@ exact-artifact DB acceptance for local R6. No schema or migration is included.
 The Mautic 7 image-proxy switch and Mautic 6 disabled path retain regression coverage. Update this file and the workspace `../../COMPATIBILITY_INDEX.md` row with every plugin-related change or review.
 
 
-Candidate note (25 September 2026): local `1.0.49` preserves the 248 px native
+Published main note (25 September 2026): `1.0.49` preserves the 248 px native
 time-only field width while rendering `UTC` above the offset without
 parentheses. The time input reclaims 4 px. Browser emulation used Mautic 7.2's compiled CSS and
 Campaign `Event/form.html.twig` structure; JavaScript regression tests pass. No
-live Mautic or Operations acceptance was run. This is not published-release
-compatibility evidence.
+live Mautic or Operations acceptance was run. Compatibility marks remain tied to 1.0.45; this is not new release compatibility
+evidence.
