@@ -3,7 +3,7 @@
 Last reviewed: 25 September 2026.
 
 Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`). Canonical main is
-`1.0.50` (`d48118f`). The
+`1.0.50` (implementation commit `797de98`). The
 1.0.50 change restores the 1.0.44 suffix-style timezone label on wide scheduled
 controls and omits the label entirely at widths of 420 px or less. JavaScript
 regressions cover wide rendering, narrow omission, and width changes; PHP syntax
