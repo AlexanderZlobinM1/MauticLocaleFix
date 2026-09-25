@@ -22,3 +22,39 @@
     line-height: 1.3;
     white-space: nowrap;
 }
+
+.input-group.mautic-locale-fix-timezone-control--narrow.mautic-locale-fix-timezone-control--time-only > .form-control {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    padding: 4px 2px;
+    font-size: 11px;
+}
+
+.input-group.mautic-locale-fix-timezone-control--narrow.mautic-locale-fix-timezone-control--time-only > .mautic-locale-fix-timezone-label {
+    flex: 0 0 38px;
+    width: 38px;
+    box-sizing: border-box;
+    padding: 3px 2px;
+    font-size: 9px;
+    line-height: 1.05;
+    white-space: normal;
+    text-align: center;
+}
+
+.input-group.mautic-locale-fix-timezone-control--narrow.mautic-locale-fix-timezone-control--time-only > .mautic-locale-fix-timezone-label--stacked {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    align-content: center;
+}
+
+.mautic-locale-fix-timezone-label--stacked > .mautic-locale-fix-timezone-prefix {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.mautic-locale-fix-timezone-label--stacked > .mautic-locale-fix-timezone-offset {
+    grid-column: 1;
+    grid-row: 2;
+}

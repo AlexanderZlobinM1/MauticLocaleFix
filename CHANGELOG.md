@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.49 — 2026-09-25
+
+- Preserve the native width of narrow time-only campaign event fields when
+  adding timezone labels. Display UTC and the offset on two lines without
+  parentheses, giving the reclaimed label width back to the time input. Wide
+  scheduled fields remain unchanged.
+
 ## 1.0.48 — 2026-09-25
 
 - Keep timezone labels on the same line at every field width. On narrow fields,

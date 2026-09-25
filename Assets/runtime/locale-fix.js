@@ -592,6 +592,14 @@
         return !!(element && element.classList && typeof element.classList.contains === 'function' && element.classList.contains(className));
     }
 
+    function isTimeOnlyScheduledInput(input) {
+        var name = String(input && (input.name || (typeof input.getAttribute === 'function' && input.getAttribute('name'))) || '');
+        var id = String(input && (input.id || (typeof input.getAttribute === 'function' && input.getAttribute('id'))) || '');
+        var timeFieldPattern = /(?:\[(?:triggerHour|triggerRestrictedStartHour|triggerRestrictedStopHour)\]|_(?:triggerHour|triggerRestrictedStartHour|triggerRestrictedStopHour))$/;
+
+        return timeFieldPattern.test(name) || timeFieldPattern.test(id) || /^\s*\d{1,2}:\d{2}\s*$/.test(String(input && input.value || ''));
+    }
+
     function badgeForScheduledDateTimeInput(input) {
         var parent = input && input.parentElement;
         var children;
@@ -672,16 +680,74 @@
     function updateTimezoneLabelLayout(group, width) {
         var children = group && group.children ? group.children : [];
         var hasLabel = false;
+        var timeOnly = false;
+        var input = null;
+        var label = null;
 
         for (var i = 0; i < children.length; i += 1) {
             if (children[i] && children[i].className && String(children[i].className).indexOf('mautic-locale-fix-timezone-label') !== -1) {
                 hasLabel = true;
-                break;
+                label = children[i];
+            }
+            if (children[i] && typeof children[i].value === 'string' && isTimeOnlyScheduledInput(children[i])) {
+                timeOnly = true;
+                input = children[i];
             }
         }
         if (width > 0 && group && group.classList && typeof group.classList.toggle === 'function') {
             group.classList.toggle('mautic-locale-fix-timezone-control--narrow', hasLabel && width <= 420);
+            group.classList.toggle('mautic-locale-fix-timezone-control--time-only', hasLabel && timeOnly);
         }
+        if (label && input) {
+            renderTimezoneLabel(label, input, hasLabel && timeOnly && width > 0 && width <= 420);
+        }
+    }
+
+    function renderTimezoneLabel(label, input, compact) {
+        var value = timezoneLabelValue(input);
+        var offset = compact && timezoneLabelMode === 'offset' && value.match(/^UTC([+-]\d{2}:\d{2})$/);
+        var classes;
+
+        if (!label || !value) {
+            return;
+        }
+
+        classes = String(label.className || '').split(/\s+/).filter(Boolean).filter(function (className) {
+            return className !== 'mautic-locale-fix-timezone-label--stacked';
+        });
+        if (offset) {
+            classes.push('mautic-locale-fix-timezone-label--stacked');
+        }
+        label.className = classes.join(' ');
+
+        if (typeof label.removeChild === 'function') {
+            while (label.firstChild) {
+                label.removeChild(label.firstChild);
+            }
+        } else if (label.children && typeof label.children.splice === 'function') {
+            label.children.splice(0, label.children.length);
+        }
+
+        if (offset && document.createElement && typeof label.appendChild === 'function') {
+            label.textContent = '';
+            label.setAttribute('aria-label', 'UTC' + offset[1]);
+
+            var prefix = document.createElement('span');
+            prefix.className = 'mautic-locale-fix-timezone-prefix';
+            prefix.textContent = 'UTC';
+
+            var offsetValue = document.createElement('span');
+            offsetValue.className = 'mautic-locale-fix-timezone-offset';
+            offsetValue.textContent = offset[1];
+
+            label.appendChild(prefix);
+            label.appendChild(offsetValue);
+
+            return;
+        }
+
+        label.textContent = ' (' + value + ')';
+        label.setAttribute('aria-label', ' (' + value + ')');
     }
 
     function trackTimezoneLabelGroup(group) {
@@ -741,8 +807,9 @@
             trackTimezoneLabelGroup(group);
         }
 
-        badge.textContent = ' (' + value + ')';
         badge.title = mauticTimezone;
+        group = input.parentElement;
+        renderTimezoneLabel(badge, input, hasClass(group, 'mautic-locale-fix-timezone-control--narrow') && hasClass(group, 'mautic-locale-fix-timezone-control--time-only'));
 
         return true;
     }

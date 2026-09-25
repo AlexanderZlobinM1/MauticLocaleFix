@@ -226,6 +226,7 @@ function runPlugin(config, options = {}) {
       const element = {
         children: [],
         className: '',
+        attributes: {},
         classList: {
           contains(name) {
             return String(element.className || '').split(/\s+/).indexOf(name) !== -1;
@@ -247,7 +248,12 @@ function runPlugin(config, options = {}) {
           const index = reference ? this.children.indexOf(reference) : -1;
           this.children.splice(index < 0 ? this.children.length : index, 0, child);
         },
-        setAttribute() {},
+        setAttribute(name, value) {
+          this.attributes[name] = String(value);
+        },
+        getAttribute(name) {
+          return Object.prototype.hasOwnProperty.call(this.attributes, name) ? this.attributes[name] : null;
+        },
         remove() {
           if (this.parentNode) {
             const index = this.parentNode.children.indexOf(this);
@@ -1266,6 +1272,43 @@ function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
   narrowRuntime.resize(narrowGroup, 230);
   assert.ok(narrowGroup.classList.contains('mautic-locale-fix-timezone-control--narrow'));
   assert.strictEqual(input.value, '2026-07-15 12:00');
+
+  const timeOnlyInput = createInput('', {
+    id: 'campaignevent_triggerHour',
+    name: 'campaignevent[triggerHour]',
+  });
+  timeOnlyInput.timezoneControlWidth = 75;
+  const timeOnlyGroup = createInputGroup(timeOnlyInput);
+  const timeOnlyRuntime = runPlugin({
+    enabled: true,
+    calendarEnabled: false,
+    timezoneLabelMode: 'offset',
+    mauticTimezone: 'Europe/Belgrade',
+  }, {
+    input: timeOnlyInput,
+    querySelectorAll(selector) {
+      return selector.indexOf('[triggerHour]') !== -1 ? [timeOnlyInput] : [];
+    },
+  });
+  const timeOnlyLabel = timeOnlyGroup.children[1];
+  assert.ok(timeOnlyGroup.classList.contains('mautic-locale-fix-timezone-control--narrow'));
+  assert.ok(timeOnlyGroup.classList.contains('mautic-locale-fix-timezone-control--time-only'));
+  assert.ok(timeOnlyLabel.className.indexOf('mautic-locale-fix-timezone-label--stacked') !== -1);
+  assert.strictEqual(timeOnlyLabel.children[0].textContent, 'UTC');
+  const timeOnlyOffset = timeOnlyLabel.children[1].textContent;
+  assert.ok(/^[+-]\d{2}:\d{2}$/.test(timeOnlyOffset));
+  assert.strictEqual(timeOnlyLabel.getAttribute('aria-label'), 'UTC' + timeOnlyOffset);
+  assert.ok(timezoneLabelStyles.indexOf('flex: 0 0 38px') !== -1);
+  assert.ok(timezoneLabelStyles.indexOf('grid-template-columns: 1fr') !== -1);
+  timeOnlyRuntime.resize(timeOnlyGroup, 500);
+  assert.ok(!timeOnlyLabel.className.includes('mautic-locale-fix-timezone-label--stacked'));
+  assert.strictEqual(timeOnlyGroup.classList.contains('mautic-locale-fix-timezone-control--time-only'), true);
+  assert.strictEqual(timeOnlyLabel.textContent, ' (UTC' + timeOnlyOffset + ')');
+  assert.strictEqual(timeOnlyLabel.getAttribute('aria-label'), ' (UTC' + timeOnlyOffset + ')');
+  timeOnlyRuntime.resize(timeOnlyGroup, 75);
+  assert.ok(timeOnlyLabel.className.indexOf('mautic-locale-fix-timezone-label--stacked') !== -1);
+  assert.strictEqual(timeOnlyLabel.children[0].textContent, 'UTC');
+  assert.strictEqual(timeOnlyLabel.children[1].textContent, timeOnlyOffset);
 
   const standaloneInput = createInput('2026-07-15 12:00', {
     id: 'campaign_publishUp',
