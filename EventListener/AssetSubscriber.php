@@ -14,7 +14,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class AssetSubscriber implements EventSubscriberInterface
 {
-    private const ASSET_VERSION = '1.0.48';
+    private const ASSET_VERSION = '1.0.50';
 
     public function __construct(
         private IntegrationHelper $integrationHelper,
@@ -78,7 +78,6 @@ class AssetSubscriber implements EventSubscriberInterface
                 JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
             ).';'
         );
-        $event->addStylesheet('plugins/MauticLocaleFixBundle/Assets/css/timezone-label.css?v='.self::ASSET_VERSION);
         $event->addScript(
             'plugins/MauticLocaleFixBundle/Assets/runtime/locale-fix.js?v='.self::ASSET_VERSION,
             'bodyClose',

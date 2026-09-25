@@ -3,26 +3,22 @@
 Last reviewed: 25 September 2026.
 
 Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`). Canonical main is
-at `1.0.49` (`19d1be1`). keeps wide controls unchanged
-and preserves the native width of narrow time-only controls by placing `UTC` and
-its offset on two lines without parentheses, giving the reclaimed width to the
-time input. The JavaScript suite
-passes, and a browser emulation using Mautic 7.2 CSS plus the Campaign event
-form markup confirms that native and labeled controls at the same width both
-occupy 248 px. This is visual emulation only; no full Mautic instance or
-Operations acceptance was run. Compatibility marks remain tied to 1.0.45. Preceding
-release `1.0.44` is `8961bcb`. Release `1.0.45` adds an opt-in
-inactive-campaign schedule editor; its default
-preserves Mautic's disabled date/time inputs. Local PHP and JavaScript regression
-checks pass on Mautic 6.0.9 and 7.2.0 dependency trees. The operator manually
-accepted the campaign editor UI checks on Bigartmail. The
+`1.0.50` (local source under review; Git publication follows verification). The
+1.0.50 change restores the 1.0.44 suffix-style timezone label on wide scheduled
+controls and omits the label entirely at widths of 420 px or less. JavaScript
+regressions cover wide rendering, narrow omission, and width changes; PHP syntax
+and diff checks pass. No live Mautic UI or Operations acceptance was run for
+1.0.50. Compatibility marks remain tied to 1.0.45. Preceding release `1.0.44`
+is `8961bcb`. Release `1.0.45` adds an opt-in inactive-campaign schedule editor;
+its default preserves Mautic's disabled date/time inputs. Local PHP and
+JavaScript regression checks pass on Mautic 6.0.9 and 7.2.0 dependency trees.
+The operator manually accepted the campaign editor UI checks on Bigartmail. The
 Operations database-only check passed on the installed 1.0.45 tree: changing
-only the user's timezone from UTC to Europe/Belgrade left stored activation
-and deactivation timestamps unchanged; timezone was restored to UTC and the
-final database values matched baseline. This evidence
-does not identify the installed tree as local candidate R6: the installed
-`AssetSubscriber.php` and `settings-toggle-compat.js` hashes differed from the
-R6 archive, SHA-256
+only the user's timezone from UTC to Europe/Belgrade left stored activation and
+deactivation timestamps unchanged; timezone was restored to UTC and the final
+database values matched baseline. This evidence does not identify the installed
+tree as local candidate R6: the installed `AssetSubscriber.php` and
+`settings-toggle-compat.js` hashes differed from the R6 archive, SHA-256
 `49a98574d7c2903340b6ce965c6aab1cf56abdd7ed3d08dd4ed2ff7b8ac81f92`. The
 operator explicitly directed publication after verifying the current installed
 version and manually accepted UI; the database evidence is attributed only to
@@ -52,9 +48,8 @@ exact-artifact DB acceptance for local R6. No schema or migration is included.
 The Mautic 7 image-proxy switch and Mautic 6 disabled path retain regression coverage. Update this file and the workspace `../../COMPATIBILITY_INDEX.md` row with every plugin-related change or review.
 
 
-Published main note (25 September 2026): `1.0.49` preserves the 248 px native
-time-only field width while rendering `UTC` above the offset without
-parentheses. The time input reclaims 4 px. Browser emulation used Mautic 7.2's compiled CSS and
-Campaign `Event/form.html.twig` structure; JavaScript regression tests pass. No
-live Mautic or Operations acceptance was run. Compatibility marks remain tied to 1.0.45; this is not new release compatibility
-evidence.
+Current main note (25 September 2026): 1.0.50 restores the suffix text and
+native inline position used by 1.0.44 on controls wider than 420 px. At 420 px or
+less the plugin does not insert a timezone label, leaving Mautic's narrow
+controls untouched. JavaScript regression tests pass; no live UI acceptance was
+run for this change. Compatibility marks remain tied to release 1.0.45.

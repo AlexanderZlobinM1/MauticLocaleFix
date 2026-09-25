@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.50 — 2026-09-25
+
+- Restore the Mautic 1.0.44 inline timezone suffix on wide scheduled fields.
+- Omit timezone labels entirely on narrow controls (420 px or less), keeping
+  their native width and layout. The label follows the control width when the
+  page is resized.
+
 ## 1.0.49 — 2026-09-25
 
 - Preserve the native width of narrow time-only campaign event fields when

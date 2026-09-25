@@ -7,10 +7,6 @@ const source = fs.readFileSync(
   path.join(__dirname, '../../Assets/runtime/locale-fix.js'),
   'utf8'
 );
-const timezoneLabelStyles = fs.readFileSync(
-  path.join(__dirname, '../../Assets/css/timezone-label.css'),
-  'utf8'
-);
 
 function createInput(value, options = {}) {
     const attrs = Object.assign({}, options.attrs || {});
@@ -1241,8 +1237,7 @@ function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
   assert.strictEqual(group.children[0], input);
   assert.strictEqual(group.children[1].textContent, ' (UTC+02:00)');
   assert.ok(group.children[1].className.indexOf('input-group-addon') !== -1);
-  assert.ok(!group.classList.contains('mautic-locale-fix-timezone-control--narrow'));
-  assert.ok(timezoneLabelStyles.indexOf('.input-group.mautic-locale-fix-timezone-control--narrow') !== -1);
+  assert.strictEqual(group.children[1].textContent, ' (UTC+02:00)');
 
   const narrowInput = createInput('2026-07-15 12:00', {
     id: 'campaign_publishUp',
@@ -1261,17 +1256,16 @@ function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
       return selector.indexOf('[publishUp]') !== -1 ? [narrowInput] : [];
     },
   });
-  assert.ok(narrowGroup.classList.contains('mautic-locale-fix-timezone-control--narrow'));
+  assert.strictEqual(narrowGroup.children.length, 1);
   assert.strictEqual(narrowGroup.children[0], narrowInput);
-  assert.strictEqual(narrowGroup.children[1].textContent, ' (UTC+02:00)');
-  assert.ok(timezoneLabelStyles.indexOf('flex-flow: row nowrap') !== -1);
-  assert.ok(timezoneLabelStyles.indexOf('font-size: 11px') !== -1);
-  assert.ok(timezoneLabelStyles.indexOf('padding: 4px 5px') !== -1);
+  assert.strictEqual(narrowInput.value, '2026-07-15 12:00');
+  narrowInput.timezoneControlWidth = 500;
   narrowRuntime.resize(narrowGroup, 500);
-  assert.ok(!narrowGroup.classList.contains('mautic-locale-fix-timezone-control--narrow'));
+  assert.strictEqual(narrowGroup.children[1].textContent, ' (UTC+02:00)');
+  narrowInput.timezoneControlWidth = 230;
   narrowRuntime.resize(narrowGroup, 230);
-  assert.ok(narrowGroup.classList.contains('mautic-locale-fix-timezone-control--narrow'));
-  assert.strictEqual(input.value, '2026-07-15 12:00');
+  assert.strictEqual(narrowGroup.children.length, 1);
+  assert.strictEqual(narrowGroup.children[0], narrowInput);
 
   const timeOnlyInput = createInput('', {
     id: 'campaignevent_triggerHour',
@@ -1290,25 +1284,9 @@ function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
       return selector.indexOf('[triggerHour]') !== -1 ? [timeOnlyInput] : [];
     },
   });
-  const timeOnlyLabel = timeOnlyGroup.children[1];
-  assert.ok(timeOnlyGroup.classList.contains('mautic-locale-fix-timezone-control--narrow'));
-  assert.ok(timeOnlyGroup.classList.contains('mautic-locale-fix-timezone-control--time-only'));
-  assert.ok(timeOnlyLabel.className.indexOf('mautic-locale-fix-timezone-label--stacked') !== -1);
-  assert.strictEqual(timeOnlyLabel.children[0].textContent, 'UTC');
-  const timeOnlyOffset = timeOnlyLabel.children[1].textContent;
-  assert.ok(/^[+-]\d{2}:\d{2}$/.test(timeOnlyOffset));
-  assert.strictEqual(timeOnlyLabel.getAttribute('aria-label'), 'UTC' + timeOnlyOffset);
-  assert.ok(timezoneLabelStyles.indexOf('flex: 0 0 38px') !== -1);
-  assert.ok(timezoneLabelStyles.indexOf('grid-template-columns: 1fr') !== -1);
-  timeOnlyRuntime.resize(timeOnlyGroup, 500);
-  assert.ok(!timeOnlyLabel.className.includes('mautic-locale-fix-timezone-label--stacked'));
-  assert.strictEqual(timeOnlyGroup.classList.contains('mautic-locale-fix-timezone-control--time-only'), true);
-  assert.strictEqual(timeOnlyLabel.textContent, ' (UTC' + timeOnlyOffset + ')');
-  assert.strictEqual(timeOnlyLabel.getAttribute('aria-label'), ' (UTC' + timeOnlyOffset + ')');
-  timeOnlyRuntime.resize(timeOnlyGroup, 75);
-  assert.ok(timeOnlyLabel.className.indexOf('mautic-locale-fix-timezone-label--stacked') !== -1);
-  assert.strictEqual(timeOnlyLabel.children[0].textContent, 'UTC');
-  assert.strictEqual(timeOnlyLabel.children[1].textContent, timeOnlyOffset);
+  assert.strictEqual(timeOnlyGroup.children.length, 1);
+  assert.strictEqual(timeOnlyGroup.children[0], timeOnlyInput);
+  assert.strictEqual(timeOnlyInput.value, '');
 
   const standaloneInput = createInput('2026-07-15 12:00', {
     id: 'campaign_publishUp',
