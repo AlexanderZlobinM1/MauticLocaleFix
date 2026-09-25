@@ -3,15 +3,17 @@
 Last reviewed: 25 September 2026.
 
 Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`). Canonical main is
-`1.0.50` (`797de98`). The
+`1.0.50` (`d48118f`). The
 1.0.50 change restores the 1.0.44 suffix-style timezone label on wide scheduled
 controls and omits the label entirely at widths of 420 px or less. JavaScript
 regressions cover wide rendering, narrow omission, and width changes; PHP syntax
-and diff checks pass. No live Mautic UI or Operations acceptance was run for
-1.0.50. Compatibility marks remain tied to 1.0.45. Preceding release `1.0.44`
-is `8961bcb`. Release `1.0.45` adds an opt-in inactive-campaign schedule editor;
-its default preserves Mautic's disabled date/time inputs. Local PHP and
-JavaScript regression checks pass on Mautic 6.0.9 and 7.2.0 dependency trees.
+and diff checks pass. A local browser emulation using Mautic 7.2 compiled CSS
+showed the 1.0.44 suffix on the wide controls and no added labels on the 248 px
+event-time controls. No live Mautic or Operations acceptance was run for 1.0.50.
+Compatibility marks remain tied to 1.0.45. Preceding release `1.0.44` is
+`8961bcb`. Release `1.0.45` adds an opt-in inactive-campaign schedule editor; its
+default preserves Mautic's disabled date/time inputs. Local PHP and JavaScript
+regression checks pass on Mautic 6.0.9 and 7.2.0 dependency trees.
 The operator manually accepted the campaign editor UI checks on Bigartmail. The
 Operations database-only check passed on the installed 1.0.45 tree: changing
 only the user's timezone from UTC to Europe/Belgrade left stored activation and
