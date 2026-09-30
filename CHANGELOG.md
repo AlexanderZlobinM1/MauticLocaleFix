@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.51 — 2026-10-01
+
+- Publish the accepted campaign editor layout for Mautic 7.1.3 and 7.2.1: keep the native two-column layout on wide screens, collapse through Mautic's responsive breakpoint, and keep the right campaign column bounded.
+- Render ISO 8601-style timezone offsets without the `UTC` prefix and add one shared timezone label to interval trigger time fields.
+- Preserve the stored schedule instant; labels remain display-only.
+
 ## 1.0.50 — 2026-09-25
 
 - Restore the Mautic 1.0.44 inline timezone suffix on wide scheduled fields.

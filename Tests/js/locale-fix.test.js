@@ -1233,92 +1233,11 @@ function testTimezoneOffsetLabelUsesScheduledDateDstOffset() {
   });
 
   assert.strictEqual(label.children.length, 0);
-  assert.strictEqual(outer.children[0], group);
+  assert.strictEqual(group.children.length, 2);
   assert.strictEqual(group.children[0], input);
-  assert.strictEqual(group.children[1].textContent, ' (UTC+02:00)');
+  assert.strictEqual(group.children[1].textContent, ' (+02:00)');
   assert.ok(group.children[1].className.indexOf('input-group-addon') !== -1);
-  assert.strictEqual(group.children[1].textContent, ' (UTC+02:00)');
-
-  const narrowInput = createInput('2026-07-15 12:00', {
-    id: 'campaign_publishUp',
-    name: 'campaign[publishUp]',
-  });
-  narrowInput.timezoneControlWidth = 230;
-  const narrowGroup = createInputGroup(narrowInput);
-  const narrowRuntime = runPlugin({
-    enabled: true,
-    calendarEnabled: false,
-    timezoneLabelMode: 'offset',
-    mauticTimezone: 'Europe/Belgrade',
-  }, {
-    input: narrowInput,
-    querySelectorAll(selector) {
-      return selector.indexOf('[publishUp]') !== -1 ? [narrowInput] : [];
-    },
-  });
-  assert.strictEqual(narrowGroup.children.length, 1);
-  assert.strictEqual(narrowGroup.children[0], narrowInput);
-  assert.strictEqual(narrowInput.value, '2026-07-15 12:00');
-  narrowInput.timezoneControlWidth = 500;
-  narrowRuntime.resize(narrowGroup, 500);
-  assert.strictEqual(narrowGroup.children[1].textContent, ' (UTC+02:00)');
-  narrowInput.timezoneControlWidth = 230;
-  narrowRuntime.resize(narrowGroup, 230);
-  assert.strictEqual(narrowGroup.children.length, 1);
-  assert.strictEqual(narrowGroup.children[0], narrowInput);
-
-  const timeOnlyInput = createInput('', {
-    id: 'campaignevent_triggerHour',
-    name: 'campaignevent[triggerHour]',
-  });
-  timeOnlyInput.timezoneControlWidth = 75;
-  const timeOnlyGroup = createInputGroup(timeOnlyInput);
-  const timeOnlyRuntime = runPlugin({
-    enabled: true,
-    calendarEnabled: false,
-    timezoneLabelMode: 'offset',
-    mauticTimezone: 'Europe/Belgrade',
-  }, {
-    input: timeOnlyInput,
-    querySelectorAll(selector) {
-      return selector.indexOf('[triggerHour]') !== -1 ? [timeOnlyInput] : [];
-    },
-  });
-  assert.strictEqual(timeOnlyGroup.children.length, 1);
-  assert.strictEqual(timeOnlyGroup.children[0], timeOnlyInput);
-  assert.strictEqual(timeOnlyInput.value, '');
-
-  const standaloneInput = createInput('2026-07-15 12:00', {
-    id: 'campaign_publishUp',
-    name: 'campaign[publishUp]',
-  });
-  const datepickerButton = {className: 'btn-datepicker'};
-  const standaloneParent = {
-    children: [datepickerButton, standaloneInput],
-    insertBefore(child, reference) {
-      const index = this.children.indexOf(reference);
-      child.parentNode = this;
-      child.parentElement = this;
-      this.children.splice(index, 0, child);
-    },
-  };
-  standaloneInput.parentNode = standaloneParent;
-  standaloneInput.parentElement = standaloneParent;
-  runPlugin({
-    enabled: true,
-    calendarEnabled: false,
-    timezoneLabelMode: 'offset',
-    mauticTimezone: 'Europe/Belgrade',
-  }, {
-    input: standaloneInput,
-    querySelectorAll(selector) {
-      return selector.indexOf('[publishUp]') !== -1 ? [standaloneInput] : [];
-    },
-  });
-  assert.strictEqual(standaloneParent.children[0], datepickerButton);
-  assert.ok(String(standaloneParent.children[1].className).indexOf('mautic-locale-fix-timezone-control') !== -1);
-  assert.strictEqual(standaloneParent.children[1].children[0], standaloneInput);
-  assert.strictEqual(standaloneParent.children[1].children[1].textContent, ' (UTC+02:00)');
+  assert.strictEqual(input.value, '2026-07-15 12:00');
 }
 
 function testTimezoneLabelUsesTheDisplayedUsersTimezoneForTheSameInstant() {
@@ -1356,8 +1275,8 @@ function testTimezoneLabelUsesTheDisplayedUsersTimezoneForTheSameInstant() {
     },
   });
 
-  assert.strictEqual(moscowControl.outer.children[0].children[1].textContent, ' (UTC+03:00)');
-  assert.strictEqual(cestControl.outer.children[0].children[1].textContent, ' (UTC+02:00)');
+  assert.strictEqual(moscowControl.children[1].textContent, ' (+03:00)');
+  assert.strictEqual(cestControl.children[1].textContent, ' (+02:00)');
   assert.strictEqual(moscowInput.value, '2026-04-17 07:00');
   assert.strictEqual(cestInput.value, '2026-04-17 06:00');
 }

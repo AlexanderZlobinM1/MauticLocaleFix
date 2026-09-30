@@ -497,9 +497,12 @@
 
         offset = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute || 0, parts.second || 0) - date.getTime();
         absolute = Math.abs(Math.round(offset / 60000));
+        if (absolute === 0) {
+            return '+00:00';
+        }
         sign = offset < 0 ? '-' : '+';
 
-        return 'UTC' + sign + pad(Math.floor(absolute / 60)) + ':' + pad(absolute % 60);
+        return sign + pad(Math.floor(absolute / 60)) + ':' + pad(absolute % 60);
     }
 
     var timezoneAbbreviationFallbacks = {
@@ -637,33 +640,139 @@
         }
     }
 
+    function isCampaignTriggerInput(input) {
+        return !!(input && input.name && /\[trigger(?:Hour|RestrictedStartHour|RestrictedStopHour)\]/.test(input.name));
+    }
+
+    function campaignTriggerTimezoneGroup(input) {
+        var current = input && input.parentElement;
+
+        while (current) {
+            if (hasClass(current, 'd-flex')) {
+                return current;
+            }
+            current = current.parentElement;
+        }
+
+        return queryOne('#interval_settings .d-flex');
+    }
+
+    function campaignTriggerTimezoneLabel(group) {
+        var labels = group && group.children ? group.children : [];
+
+        for (var i = 0; i < labels.length; i += 1) {
+            if (labels[i] && labels[i].getAttribute && labels[i].getAttribute('data-mautic-locale-fix-trigger-timezone-label') === '1') {
+                return labels[i];
+            }
+        }
+
+        return null;
+    }
+
+    function updateCampaignTriggerTimezoneLabel(input) {
+        var group;
+        var badge;
+        var value;
+
+        if (!isCampaignTriggerInput(input)) {
+            return false;
+        }
+
+        group = campaignTriggerTimezoneGroup(input);
+        if (!group || typeof group.appendChild !== 'function') {
+            return false;
+        }
+
+        Array.prototype.forEach.call(queryAll('.mautic-locale-fix-timezone-label'), function (label) {
+            if (label && label.parentElement === input.parentElement && typeof label.remove === 'function') {
+                label.remove();
+            }
+        });
+
+        if (timezoneLabelMode === 'hidden') {
+            badge = campaignTriggerTimezoneLabel(group);
+            if (badge && typeof badge.remove === 'function') {
+                badge.remove();
+            }
+            return false;
+        }
+
+        value = timezoneLabelValue(input);
+        if (!value || !document.createElement) {
+            return false;
+        }
+
+        badge = campaignTriggerTimezoneLabel(group);
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'mautic-locale-fix-timezone-label mautic-locale-fix-trigger-timezone-label';
+            badge.setAttribute('data-mautic-locale-fix-trigger-timezone-label', '1');
+            group.appendChild(badge);
+        }
+
+        badge.textContent = ' (' + value + ')';
+        badge.title = mauticTimezone;
+        if (badge.style) {
+            badge.style.display = 'inline-flex';
+            badge.style.alignItems = 'center';
+            badge.style.flex = '0 0 auto';
+            badge.style.maxWidth = '100%';
+            badge.style.whiteSpace = 'nowrap';
+            badge.style.boxSizing = 'border-box';
+            badge.style.backgroundColor = 'transparent';
+            badge.style.border = '0';
+            badge.style.color = 'inherit';
+            badge.style.fontSize = 'inherit';
+            badge.style.lineHeight = 'inherit';
+            badge.style.paddingLeft = '4px';
+            badge.style.paddingRight = '8px';
+        }
+
+        return true;
+    }
+
     function timezoneControlGroup(input) {
         var parent = input && input.parentElement;
         var group;
+        var pluginGroup = false;
 
         if (!parent) {
             return null;
         }
 
         if (hasClass(parent, 'input-group')) {
-            return parent;
+            group = parent;
+        } else {
+            if (!document.createElement || typeof parent.insertBefore !== 'function') {
+                return null;
+            }
+
+            group = document.createElement('div');
+            group.className = 'input-group mautic-locale-fix-timezone-control';
+            pluginGroup = true;
+            if (typeof group.appendChild !== 'function') {
+                return null;
+            }
+
+            parent.insertBefore(group, input);
+            group.appendChild(input);
         }
 
-        if (!document.createElement || typeof parent.insertBefore !== 'function') {
-            return null;
-        }
-
-        group = document.createElement('div');
-        group.className = 'input-group mautic-locale-fix-timezone-control';
         if (group.style) {
-            group.style.width = '100%';
+            group.style.display = 'flex';
+            group.style.flexWrap = 'nowrap';
+            group.style.alignItems = 'stretch';
+            group.style.minWidth = '0';
+            group.style.backgroundColor = '#f5f5f5';
+            group.style.border = '1px solid #c8c8c8';
+            group.style.borderRadius = '4px';
+            group.style.overflow = 'hidden';
+            if (pluginGroup) {
+                group.style.width = '100%';
+                group.style.maxWidth = '100%';
+                group.style.boxSizing = 'border-box';
+            }
         }
-        if (typeof group.appendChild !== 'function') {
-            return null;
-        }
-
-        parent.insertBefore(group, input);
-        group.appendChild(input);
 
         return group;
     }
@@ -697,6 +806,35 @@
 
         group.insertBefore(badge, input.nextSibling || null);
 
+        if (input.style) {
+            input.style.display = 'block';
+            input.style.flex = '1 1 0';
+            input.style.minWidth = '0';
+            input.style.width = 'auto';
+            input.style.maxWidth = '100%';
+            input.style.boxSizing = 'border-box';
+            input.style.backgroundColor = 'transparent';
+            input.style.border = '0';
+            input.style.borderRadius = '0';
+            input.style.outline = '0';
+        }
+        if (badge.style) {
+            badge.style.display = 'flex';
+            badge.style.alignItems = 'center';
+            badge.style.flex = '0 0 auto';
+            badge.style.width = 'auto';
+            badge.style.minWidth = timezoneLabelMode === 'offset' ? '64px' : '0';
+            badge.style.maxWidth = 'none';
+            badge.style.whiteSpace = 'nowrap';
+            badge.style.backgroundColor = 'transparent';
+            badge.style.border = '0';
+            badge.style.color = 'inherit';
+            badge.style.fontSize = 'inherit';
+            badge.style.lineHeight = 'inherit';
+            badge.style.paddingLeft = '4px';
+            badge.style.paddingRight = '8px';
+            badge.style.boxSizing = 'border-box';
+        }
         return true;
     }
 
@@ -710,15 +848,8 @@
             return false;
         }
 
-        trackTimezoneLabelContainer(input);
-        container = scheduledControlContainer(input);
-        width = container && typeof container.getBoundingClientRect === 'function'
-            ? container.getBoundingClientRect().width
-            : 0;
-        if (width > 0 && width <= 420) {
-            removeTimezoneLabel(input);
-
-            return false;
+        if (isCampaignTriggerInput(input)) {
+            return updateCampaignTriggerTimezoneLabel(input);
         }
 
         if (timezoneLabelMode === 'hidden') {
@@ -740,10 +871,26 @@
                 return false;
             }
         }
-
         badge.title = mauticTimezone;
         badge.textContent = ' (' + value + ')';
 
+        if (badge.style) {
+            badge.style.display = 'flex';
+            badge.style.alignItems = 'center';
+            badge.style.flex = '0 0 auto';
+            badge.style.width = 'auto';
+            badge.style.minWidth = timezoneLabelMode === 'offset' ? '64px' : '0';
+            badge.style.maxWidth = 'none';
+            badge.style.whiteSpace = 'nowrap';
+            badge.style.backgroundColor = 'transparent';
+            badge.style.border = '0';
+            badge.style.color = 'inherit';
+            badge.style.fontSize = 'inherit';
+            badge.style.lineHeight = 'inherit';
+            badge.style.paddingLeft = '4px';
+            badge.style.paddingRight = '8px';
+            badge.style.boxSizing = 'border-box';
+        }
         return true;
     }
 
@@ -2282,6 +2429,17 @@
         document.head.appendChild(style);
     }
 
+    function ensureCampaignLayoutStyle() {
+        if ((document.getElementById && document.getElementById('mauticlocalefix-campaign-layout-style')) || !queryOne('.s-campaigns-new .box-layout')) {
+            return;
+        }
+
+        var style = document.createElement('style');
+        style.id = 'mauticlocalefix-campaign-layout-style';
+        style.textContent = '@media (min-width:992px){.s-campaigns-new .box-layout>.col-md-3{width:300px;min-width:300px;max-width:300px;}}';
+        document.head.appendChild(style);
+    }
+
     function syncSettingsFormState() {
         var featureInputs = getQueryCollection([
             'input[name*="calendar_enabled"]',
@@ -2380,6 +2538,7 @@
 
     function applyPatch() {
         var $ = getQuery();
+        ensureCampaignLayoutStyle();
         var patched = calendarEnabled ? patchDateTimePicker($) : false;
         localizeCampaignTriggerDateInputs();
         var campaignPatched = patchCampaignDateTimeSubmit();

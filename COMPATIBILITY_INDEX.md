@@ -1,19 +1,14 @@
 # Compatibility index
 
-Last reviewed: 25 September 2026.
+Last reviewed: 1 October 2026.
 
-Current published release: `1.0.45` (`55c16dc`, tag `v1.0.45`). Canonical main is
-`1.0.50` (implementation commit `797de98`). The
-1.0.50 change restores the 1.0.44 suffix-style timezone label on wide scheduled
-controls and omits the label entirely at widths of 420 px or less. JavaScript
-regressions cover wide rendering, narrow omission, and width changes; PHP syntax
-and diff checks pass. A local browser emulation using Mautic 7.2 compiled CSS
-showed the 1.0.44 suffix on the wide controls and no added labels on the 248 px
-event-time controls. No live Mautic or Operations acceptance was run for 1.0.50.
-Compatibility marks remain tied to 1.0.45. Preceding release `1.0.44` is
-`8961bcb`. Release `1.0.45` adds an opt-in inactive-campaign schedule editor; its
-default preserves Mautic's disabled date/time inputs. Local PHP and JavaScript
-regression checks pass on Mautic 6.0.9 and 7.2.0 dependency trees.
+Current published release: `1.0.51` (canonical `main`, pending remote ref after this commit).
+The 1.0.51 release is the accepted campaign-editor layout and timezone-label
+implementation checked on Mautic 7.1.3 and 7.2.1 sandbox runtimes. It keeps the
+native responsive breakpoint, bounds the wide campaign side column, renders bare
+ISO 8601 offsets, and adds one shared label for interval trigger time fields.
+The labels are display-only; no schedule value or database schema changes are
+included. JavaScript syntax/regression and diff checks pass.
 The operator manually accepted the campaign editor UI checks on Bigartmail. The
 Operations database-only check passed on the installed 1.0.45 tree: changing
 only the user's timezone from UTC to Europe/Belgrade left stored activation and
@@ -50,8 +45,7 @@ exact-artifact DB acceptance for local R6. No schema or migration is included.
 The Mautic 7 image-proxy switch and Mautic 6 disabled path retain regression coverage. Update this file and the workspace `../../COMPATIBILITY_INDEX.md` row with every plugin-related change or review.
 
 
-Current main note (25 September 2026): 1.0.50 restores the suffix text and
-native inline position used by 1.0.44 on controls wider than 420 px. At 420 px or
-less the plugin does not insert a timezone label, leaving Mautic's narrow
-controls untouched. JavaScript regression tests pass; no live UI acceptance was
-run for this change. Compatibility marks remain tied to release 1.0.45.
+Current main note (1 October 2026): 1.0.51 is the accepted layout release.
+Mautic 7.1.3 and 7.2.1 sandbox checks covered campaign date controls, responsive
+wide/narrow rendering, calendar reopen/navigation, and the interval trigger
+mode sequence.
